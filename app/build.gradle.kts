@@ -13,8 +13,8 @@ android {
         applicationId = "com.traytimer"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1045
-        versionName = "15.7.3"
+        versionCode = 1
+        versionName = "1.0.0"
         vectorDrawables { useSupportLibrary = true }
         manifestPlaceholders["appLabel"] = "@string/app_name"
     }

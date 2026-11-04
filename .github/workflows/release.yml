@@ -1,0 +1,62 @@
+name: Release APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Build APKs
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleStandardDebug assembleDevDebug
+
+      - name: Read version
+        id: version
+        run: |
+          VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts | head -1)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release
+          cp app/build/outputs/apk/standard/debug/app-standard-debug.apk \
+             "release/TrayTimer-${{ steps.version.outputs.version }}-standard.apk"
+          cp app/build/outputs/apk/dev/debug/app-dev-debug.apk \
+             "release/TrayTimer-${{ steps.version.outputs.version }}-dev.apk"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}-build.${{ github.run_number }}
+          name: TrayTimer ${{ steps.version.outputs.version }} (build ${{ github.run_number }})
+          body: |
+            Automated build from commit `${{ github.sha }}`.
+
+            **Debug-signed APKs** — enable "install unknown apps" and install manually.
+
+            - `TrayTimer-${{ steps.version.outputs.version }}-standard.apk` — package `com.traytimer`
+            - `TrayTimer-${{ steps.version.outputs.version }}-dev.apk` — package `com.traytimer.dev` (installs alongside)
+          files: release/*.apk
+          fail_on_unmatched_files: true
