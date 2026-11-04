@@ -2,7 +2,6 @@ package com.traytimer.core
 
 import android.content.Context
 import com.traytimer.core.services.BrandsRepository
-import com.traytimer.core.services.UpdateChecker
 import com.traytimer.data.db.AppDatabase
 import com.traytimer.data.prefs.SettingsStore
 import com.traytimer.data.repo.AppointmentRepository
@@ -23,7 +22,6 @@ object Graph {
     val appointmentRepository: AppointmentRepository by lazy { AppointmentRepository(database) }
     val photoRepository: PhotoRepository by lazy { PhotoRepository(appContext, database) }
     val brandsRepository: BrandsRepository by lazy { BrandsRepository(appContext) }
-    val updateChecker: UpdateChecker by lazy { UpdateChecker() }
 
     fun init(context: Context) {
         appContext = context.applicationContext

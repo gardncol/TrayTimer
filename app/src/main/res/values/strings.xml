@@ -221,25 +221,6 @@
     <string name="sts_current_streak">Current streak: %1$d days</string>
 
     <!-- News -->
-    <string name="news_title">News &amp; tips</string>
-    <string name="news_instagram">Instagram</string>
-    <string name="news_facebook">Facebook</string>
-    <string name="news_tiktok">TikTok</string>
-    <string name="news_youtube">YouTube</string>
-    <string name="news_rednote">RedNote</string>
-    <string name="news_tips_title">Expert tips</string>
-    <string name="news_tip_clean">How to keep your aligners clean</string>
-    <string name="news_tip_clean_body">Rinse aligners every time you remove them, brush them gently with a soft toothbrush (no toothpaste — it scratches), and soak daily in clear aligner cleaner or a mild antibacterial solution. Never use hot water: it warps the plastic and changes the fit.</string>
-    <string name="news_tip_remove">Removing trays comfortably</string>
-    <string name="news_tip_remove_body">Always remove aligners from the back molars first, using a small hook motion with your fingernails or an orthodontic removal tool. Pull upward (upper) or downward (lower) at the very back and work forward. This puts less stress on the front teeth, which are the most sensitive.</string>
-    <string name="news_tip_switch">When NOT to switch trays</string>
-    <string name="news_tip_switch_body">Don\'t advance to the next tray early if the current one still feels loose in some spots or doesn\'t fully seat — attachment tracking matters more than the calendar. And if you switch a couple of days late, don\'t rush; keep each subsequent tray for its full period and let the plan catch up.</string>
-    <string name="news_whats_new">What\'s New</string>
-    <string name="news_wn_fullscreen">Improved Fullscreen Reminder — alarms now show over the lock screen with audible ringing.</string>
-    <string name="news_wn_timeline">Photo Timeline — your entire smile journey in one scrollable gallery.</string>
-    <string name="news_wn_collage">Collage Share — build and share a collage of your favorite Teethies.</string>
-    <string name="news_wn_ata">Automatic Treatment Adjustment — switch early or late and your plan recalculates itself.</string>
-    <string name="news_wn_progress">Aligner Progress View — see cumulative wear per aligner.</string>
 
     <!-- Reminders -->
     <string name="rem_put_back_title">Time to put your aligners back in!</string>
@@ -290,7 +271,6 @@
     <string name="set_photos">Photos</string>
     <string name="set_appearance">Appearance</string>
     <string name="set_time">Time &amp; locale</string>
-    <string name="set_ads_privacy">Ads &amp; privacy</string>
     <string name="set_about">About</string>
     <string name="set_timer_mode">Timer mode</string>
     <string name="set_accidental_tap">Accidental tap detection</string>
@@ -337,7 +317,6 @@
     <string name="set_widgets_install">To add a widget: long-press your home screen, choose Widgets, then pick TrayTimer.</string>
     <string name="set_widgets_time_left">Show time left to goal</string>
     <string name="set_tile_install">Swipe down twice (or once from the top-right), edit the tiles, and drag the TrayTimer tile into your Quick Settings.</string>
-    <string name="set_watch_install">Install the TrayTimer watch app from Google Play on your watch. (Wear module not bundled in this build — TODO)</string>
     <string name="set_watch_synced">Watch synced</string>
     <string name="set_watch_force_sync">Force sync data</string>
     <string name="set_gps_required">Google Play services required</string>
@@ -363,18 +342,9 @@
     <string name="set_timezone_use_device">Use device time zone</string>
     <string name="set_timezone_picker">Time zone</string>
     <string name="set_dst_notifications">Daylight-saving notifications</string>
-    <string name="set_privacy_options">Privacy options</string>
-    <string name="set_privacy_desc">Manage ad personalization consent (UMP consent flow placeholder — TODO)</string>
     <string name="set_about_version">Version %1$s</string>
     <string name="set_whats_new">What\'s New</string>
-    <string name="set_faq">FAQ</string>
-    <string name="set_privacy_policy">Privacy policy</string>
-    <string name="set_terms">Terms of use</string>
     <string name="set_licenses">Software licenses</string>
-    <string name="set_rate">Rate the app</string>
-    <string name="set_update_available">Update available — a new version of TrayTimer is ready.</string>
-    <string name="set_update_required">This version is no longer supported. Please update TrayTimer to continue.</string>
-    <string name="set_update_get">Get the update</string>
 
     <!-- OEM battery guides (DontKillMyApp-style, bundled) -->
     <string name="oem_title">Stop your phone from killing TrayTimer</string>

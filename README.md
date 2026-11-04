@@ -74,6 +74,7 @@ These are intentionally not implemented or are placeholders:
 - **No cloud backend / sync / backup.** All data is local (Room + DataStore). Uninstalling the app deletes it. Use *Photos → Export photos* for images.
 - **No Wear OS companion** (Settings shows a placeholder).
 - **No analytics/crash reporting** — the analytics facade only logs to Logcat.
+- **No network access of any kind:** the APK has no `INTERNET` permission. There is no update check, remote content, FAQ, analytics or social-media link. Brand templates ship inside the app.
 - **English only.**
 - Only **debug-signed** builds are configured; add a release signing config before publishing.
 - Not Play-Store ready: update the version, signing, policy disclosures, and review the permissions for your own release.
@@ -158,9 +159,8 @@ State is derived from timestamped out-sessions; the timer, calendar, stats and r
 - `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM`, `USE_FULL_SCREEN_INTENT`, `VIBRATE`, `WAKE_LOCK`, `RECEIVE_BOOT_COMPLETED` — reminders and alarms.
 - `FOREGROUND_SERVICE*` — full-screen ringing and Live Updates.
 - `READ_CALENDAR` / `WRITE_CALENDAR` — optional system-calendar sync.
-- `INTERNET` / `ACCESS_NETWORK_STATE` — remote brand templates / update check / FAQ.
 
-All treatment data stays on-device.
+All treatment data stays on-device. The app does not request the `INTERNET` permission at all.
 
 ---
 

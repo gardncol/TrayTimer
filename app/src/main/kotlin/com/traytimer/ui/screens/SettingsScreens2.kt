@@ -31,9 +31,6 @@ import androidx.navigation.NavHostController
 import com.traytimer.BuildConfig
 import com.traytimer.core.Graph
 import com.traytimer.core.logic.Analytics
-import com.traytimer.core.services.FaqUrls
-import com.traytimer.core.services.SocialUrls
-import com.traytimer.core.services.UpdateChecker
 import com.traytimer.data.prefs.Keys
 import com.traytimer.liveupdates.LiveUpdateService
 import com.traytimer.reminders.AlarmScheduler

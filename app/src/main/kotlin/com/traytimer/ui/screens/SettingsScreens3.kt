@@ -1,7 +1,6 @@
 package com.traytimer.ui.screens
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,9 +26,6 @@ import androidx.navigation.NavHostController
 import com.traytimer.BuildConfig
 import com.traytimer.core.Graph
 import com.traytimer.core.logic.Analytics
-import com.traytimer.core.services.FaqUrls
-import com.traytimer.core.services.SocialUrls
-import com.traytimer.core.services.UpdateChecker
 import com.traytimer.data.prefs.Keys
 import com.traytimer.liveupdates.LiveUpdateService
 import com.traytimer.reminders.AlarmScheduler
@@ -143,30 +139,21 @@ fun TileSettingsScreen(navController: NavHostController) {
     }
 }
 
-/** FR-SET-09 + FR-WEAR-* (placeholder in this build). */
+/** FR-SET-09 + FR-WEAR-* (not bundled in this build). */
 @Composable
 fun WatchSettingsScreen(navController: NavHostController) {
-    val context = androidx.compose.ui.platform.LocalContext.current
     SettingsSubScreenScaffold("Watch", navController) {
         Text(
-            "Install the TrayTimer watch app from Google Play on your watch. (Wear module not bundled in this build — TODO)",
+            "A Wear OS companion app is not included in this build.",
             style = MaterialTheme.typography.bodyLarge
         )
         Spacer(Modifier.height(8.dp))
         Text("Watch synced", style = MaterialTheme.typography.titleMedium)
         Text(
-            "Pausing on the watch updates the phone's Timer tab, Live Update notification and widgets within seconds.",
+            "When a watch app is available, pausing from the watch will update the phone's Timer tab, Live Update notification and widgets.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = {
-            runCatching {
-                context.startActivity(
-                    Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.traytimer.wearable"))
-                )
-            }
-        }) { Text("How to install") }
     }
 }
 
@@ -321,36 +308,24 @@ fun TimeSettingsScreen(navController: NavHostController) {
 /** Privacy settings. */
 @Composable
 fun AdsPrivacySettingsScreen(navController: NavHostController) {
-    val context = androidx.compose.ui.platform.LocalContext.current
     SettingsSubScreenScaffold("Privacy", navController) {
         Text(
-            "TrayTimer stores your treatment data on this device only. Nothing is uploaded.",
+            "TrayTimer stores your treatment data on this device only. The app has no internet permission and sends nothing off the device.",
             style = MaterialTheme.typography.bodyLarge
         )
         Spacer(Modifier.height(12.dp))
         Text("Privacy options", style = MaterialTheme.typography.titleMedium)
         Text(
-            "This build shows no ads and does not collect advertising identifiers.",
+            "No ads, advertising identifiers, analytics, accounts or cloud services are used in this build.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
-        Spacer(Modifier.height(12.dp))
-        OutlinedButton(onClick = {
-            runCatching {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://traytimer.com/privacy")))
-            }
-        }) { Text("Privacy policy") }
     }
 }
 
-/** FR-SET-16/17: about, What's New, FAQ, licenses, rate, update policy. */
+/** About. */
 @Composable
 fun AboutScreen(navController: NavHostController) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val scope = rememberCoroutineScope()
-    var updateState by remember { mutableStateOf<UpdateChecker.UpdateState?>(null) }
-    var faqError by remember { mutableStateOf(false) }
-
     SettingsSubScreenScaffold("About", navController) {
         Text("TrayTimer", style = MaterialTheme.typography.headlineLarge)
         Text("Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
@@ -358,50 +333,10 @@ fun AboutScreen(navController: NavHostController) {
         Text("What's New", style = MaterialTheme.typography.titleMedium)
         Text("• Improved Fullscreen Reminder\n• Photo Timeline\n• Collage Share\n• Automatic Treatment Adjustment\n• Aligner Progress View")
         Spacer(Modifier.height(12.dp))
-        OutlinedButton(onClick = {
-            scope.launch { updateState = Graph.updateChecker.check(BuildConfig.VERSION_CODE) }
-        }) { Text("Check for updates") }
-        updateState?.let {
-            Text(
-                if (it.required) "Update required — this version is no longer supported."
-                else if (it.available) "Update available — a new version of TrayTimer is ready."
-                else "You're up to date.",
-                color = if (it.available) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-            )
-        }
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = {
-            runCatching {
-                val locale = context.resources.configuration.locales[0].toLanguageTag()
-                context.startActivity(
-                    Intent(Intent.ACTION_VIEW, Uri.parse(FaqUrls.forLocale(locale)))
-                )
-            }.onFailure { faqError = true }
-        }) { Text("FAQ") }
-        if (faqError) Text("Not available offline", color = MaterialTheme.colorScheme.error)
-        OutlinedButton(onClick = {
-            runCatching {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://traytimer.com/privacy")))
-            }
-        }) { Text("Privacy policy") }
-        OutlinedButton(onClick = {
-            runCatching {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://traytimer.com/terms")))
-            }
-        }) { Text("Terms of use") }
-        OutlinedButton(onClick = {
-            runCatching {
-                context.startActivity(
-                    Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.traytimer"))
-                )
-            }
-        }) { Text("Rate the app") }
-        OutlinedButton(onClick = {
-            runCatching {
-                context.startActivity(
-                    Intent(Intent.ACTION_VIEW, Uri.parse(SocialUrls.INSTAGRAM))
-                )
-            }
-        }) { Text("Follow us on Instagram") }
+        Text(
+            "TrayTimer works fully offline. Your data stays on this device.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
     }
 }

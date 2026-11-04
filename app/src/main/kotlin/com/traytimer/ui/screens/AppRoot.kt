@@ -1,7 +1,6 @@
 package com.traytimer.ui.screens
 
 import android.Manifest
-import android.content.Intent
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,7 +40,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.traytimer.BuildConfig
 import com.traytimer.core.Graph
 import com.traytimer.core.logic.Analytics
 import com.traytimer.reminders.AlarmScheduler
@@ -229,38 +227,6 @@ fun MainScaffold(navController: NavHostController) {
                 }) { Text("No") }
             }
         )
-    }
-
-    // ---- Server-driven update check (FR-SET-17) ----
-    var updateState by remember { mutableStateOf<com.traytimer.core.services.UpdateChecker.UpdateState?>(null) }
-    LaunchedEffect(Unit) {
-        updateState = Graph.updateChecker.check(BuildConfig.VERSION_CODE)
-    }
-    updateState?.let { state ->
-        if (state.available) {
-            AlertDialog(
-                onDismissRequest = { if (!state.required) updateState = null },
-                title = { Text(if (state.required) "Update required" else "Update available") },
-                text = {
-                    Text(
-                        if (state.required) "This version is no longer supported. Please update TrayTimer to continue."
-                        else "A new version of TrayTimer is ready."
-                    )
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        state.url?.let {
-                            runCatching {
-                                context.startActivity(
-                                    Intent(Intent.ACTION_VIEW, android.net.Uri.parse(it))
-                                )
-                            }
-                        }
-                        if (!state.required) updateState = null
-                    }) { Text("Get the update") }
-                }
-            )
-        }
     }
 
     val tabs = listOf(
