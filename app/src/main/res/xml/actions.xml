@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Google Assistant built-in App Actions capabilities (FR-VOX-01/02) -->
+<actions>
+    <action intentName="actions.intent.START_TIMER">
+        <fulfillment urlTemplate="traytimer://app.traytimer.com/{deepLinkId}">
+            <parameter-mapping urlParam="deepLinkId" intentParameter="timer.timerMode" required="true" />
+        </fulfillment>
+    </action>
+    <action intentName="actions.intent.STOP_TIMER">
+        <fulfillment urlTemplate="traytimer://app.traytimer.com/stop.timer">
+            <parameter-mapping urlParam="deepLinkId" intentParameter="timer.timerMode" required="true" />
+        </fulfillment>
+    </action>
+    <action intentName="actions.intent.CREATE_TIMER">
+        <fulfillment urlTemplate="traytimer://app.traytimer.com/start.timer" />
+    </action>
+    <action intentName="actions.intent.OPEN_APP_FEATURE">
+        <fulfillment urlTemplate="traytimer://app.traytimer.com/{feature}">
+            <parameter-mapping urlParam="feature" intentParameter="feature" required="true" />
+        </fulfillment>
+    </action>
+    <action intentName="actions.intent.TAKE_PICTURE">
+        <fulfillment urlTemplate="traytimer://app.traytimer.com/take.photo" />
+    </action>
+</actions>

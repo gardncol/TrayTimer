@@ -1,0 +1,25 @@
+# Gradle / Android build output
+.gradle/
+**/build/
+local.properties
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE files
+.idea/
+*.iml
+*.hprof
+.DS_Store
+
+# Signing material
+*.jks
+*.keystore
+
+# Original product specification (development reference, not part of the app)
+TrayMinder_PRD.md
+TrayMinder_PRD.html
+
+# Logs / temp
+*.log

@@ -1,0 +1,10 @@
+[
+  { "name": "Invisalign", "aligners": 22, "days": 7 },
+  { "name": "Angel Align", "aligners": 20, "days": 10 },
+  { "name": "3M Clarity", "aligners": 24, "days": 7 },
+  { "name": "Spark", "aligners": 20, "days": 7 },
+  { "name": "SureSmile", "aligners": 18, "days": 10 },
+  { "name": "Byte", "aligners": 22, "days": 7 },
+  { "name": "ClearCorrect", "aligners": 20, "days": 10 },
+  { "name": "Other", "aligners": null, "days": null }
+]

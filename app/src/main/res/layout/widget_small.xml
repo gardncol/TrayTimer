@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_small_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:clickable="true"
+    android:foregroundGravity="center">
+    <ImageView
+        android:id="@+id/img_status"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:contentDescription="@string/wd_toggle"
+        android:padding="10dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_wearing" />
+</FrameLayout>

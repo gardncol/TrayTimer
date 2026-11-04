@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_calendar"
+        android:shortcutId="view_calendar"
+        android:shortcutLongLabel="@string/shortcut_calendar_long"
+        android:shortcutShortLabel="@string/shortcut_calendar_short">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="traytimer://app.traytimer.com/view.calendar"
+            android:targetPackage="com.traytimer"
+            android:targetClass="com.traytimer.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_camera"
+        android:shortcutId="take_selfie"
+        android:shortcutLongLabel="@string/shortcut_camera_long"
+        android:shortcutShortLabel="@string/shortcut_camera_short">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="traytimer://app.traytimer.com/take.photo"
+            android:targetPackage="com.traytimer"
+            android:targetClass="com.traytimer.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_stats"
+        android:shortcutId="view_stats"
+        android:shortcutLongLabel="@string/shortcut_stats_long"
+        android:shortcutShortLabel="@string/shortcut_stats_short">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="traytimer://app.traytimer.com/view.stats"
+            android:targetPackage="com.traytimer"
+            android:targetClass="com.traytimer.MainActivity" />
+    </shortcut>
+</shortcuts>

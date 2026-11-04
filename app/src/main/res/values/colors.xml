@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="teal_200">#5EEAD4</color>
+    <color name="teal_400">#2DD4BF</color>
+    <color name="teal_500">#14B8A6</color>
+    <color name="teal_700">#0F766E</color>
+    <color name="teal_900">#042F2E</color>
+    <color name="green_goal">#4CAF50</color>
+    <color name="yellow_warn">#FFC107</color>
+    <color name="red_miss">#EF5350</color>
+    <color name="ic_launcher_background">#0F766E</color>
+    <color name="app_surface_light">#F4FBF9</color>
+</resources>
