@@ -83,7 +83,8 @@ fun TimerScreen(
     var showAdjustTimer by remember { mutableStateOf(false) }
     var deletingSession by remember { mutableStateOf<OutSession?>(null) }
     var showReminderPrompt by remember { mutableStateOf(false) }
-    var confirmAccidental by remember { mutableStateOf(false) }
+    // Non-null while the accidental-tap dialog is open; true = stop, false = start.
+    var pendingWillStop by remember { mutableStateOf<Boolean?>(null) }
 
     val zone = remember(settings) { vm.zone(settings) }
     val goalHours = settings?.wearGoalHours ?: 22
@@ -127,12 +128,15 @@ fun TimerScreen(
                 modifier = Modifier
                     .size(260.dp)
                     .clickable {
+                        val willStop = timerState.openSession != null
                         if (confirmNeeded(timerState, settings)) {
-                            confirmAccidental = true
+                            pendingWillStop = willStop
                         } else {
-                            doToggle(vm, view, settings?.vibrate ?: true) { nowOut ->
-                                if (nowOut) showReminderPrompt = true
+                            if (settings?.vibrate == true) {
+                                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                             }
+                            if (willStop) vm.stopOut()
+                            else vm.startOut { showReminderPrompt = true }
                         }
                     }
             ) {
@@ -297,21 +301,23 @@ fun TimerScreen(
     }
 
     // ---- Accidental tap protection (FR-TMR-09) ----
-    if (confirmAccidental) {
+    pendingWillStop?.let { willStop ->
         ConfirmDialog(
-            title = "Stop the timer?",
-            text = if (timerState.openSession != null)
+            title = if (willStop) "Stop the timer?" else "Start the timer?",
+            text = if (willStop)
                 "You started the timer less than a minute ago. Stop it anyway?"
             else
                 "You stopped the timer less than a minute ago. Start it anyway?",
             confirmLabel = "Yes",
             onConfirm = {
-                confirmAccidental = false
-                doToggle(vm, view, settings?.vibrate ?: true) { nowOut ->
-                    if (nowOut) showReminderPrompt = true
+                pendingWillStop = null
+                if (settings?.vibrate == true) {
+                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 }
+                if (willStop) vm.stopOut()
+                else vm.startOut { showReminderPrompt = true }
             },
-            onDismiss = { confirmAccidental = false }
+            onDismiss = { pendingWillStop = null }
         )
     }
 
@@ -394,11 +400,6 @@ private fun confirmNeeded(state: MainViewModel.TimerState, settings: com.traytim
         val lastClosed = state.todaySessions.lastOrNull { it.endEpoch != null }
         lastClosed?.let { now - it.endEpoch!! < 60_000L } ?: false
     }
-}
-
-private fun doToggle(vm: MainViewModel, view: android.view.View, vibrate: Boolean, onToggled: (Boolean) -> Unit) {
-    if (vibrate) view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-    vm.toggleTimer { nowOut -> onToggled(nowOut) }
 }
 
 /** Undo (FR-TMR-08): reverse the most recent pause/start. */

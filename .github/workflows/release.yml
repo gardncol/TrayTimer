@@ -62,4 +62,5 @@ jobs:
             - `TrayTimer-${{ steps.version.outputs.version }}-standard.apk` — package `com.traytimer`
             - `TrayTimer-${{ steps.version.outputs.version }}-dev.apk` — package `com.traytimer.dev` (installs alongside)
           files: release/*.apk
+          generate_release_notes: true
           fail_on_unmatched_files: true
