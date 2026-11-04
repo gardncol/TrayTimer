@@ -72,10 +72,8 @@ A clear-aligner wear-time tracker for Android: log when your trays are out, get 
 These are intentionally not implemented or are placeholders:
 
 - **No cloud backend / sync / backup.** All data is local (Room + DataStore). Uninstalling the app deletes it. Use *Photos → Export photos* for images.
-- **No subscriptions, paywall, or ads** — all features are unlocked.
 - **No Wear OS companion** (Settings shows a placeholder).
 - **No analytics/crash reporting** — the analytics facade only logs to Logcat.
-- Network lookups (brand templates, minimum-version check, FAQ, social links) point at `app.traytimer.com` / `traytimer.com`; those services are **not deployed**, so the app falls back to bundled data where possible.
 - **English only.**
 - Only **debug-signed** builds are configured; add a release signing config before publishing.
 - Not Play-Store ready: update the version, signing, policy disclosures, and review the permissions for your own release.
