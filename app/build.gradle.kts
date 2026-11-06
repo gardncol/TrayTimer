@@ -13,8 +13,8 @@ android {
         applicationId = "com.traytimer"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
         vectorDrawables { useSupportLibrary = true }
         manifestPlaceholders["appLabel"] = "@string/app_name"
     }
@@ -35,10 +35,29 @@ android {
         }
     }
 
+    // Release signing is provided via environment variables (GitHub Actions secrets):
+    // TRAYTIMER_KEYSTORE, TRAYTIMER_STORE_PASSWORD, TRAYTIMER_KEY_ALIAS, TRAYTIMER_KEY_PASSWORD.
+    val releaseKeystorePath = System.getenv("TRAYTIMER_KEYSTORE")
+    val releaseStorePassword = System.getenv("TRAYTIMER_STORE_PASSWORD")
+    val releaseKeyAlias = System.getenv("TRAYTIMER_KEY_ALIAS")
+    val releaseKeyPassword = System.getenv("TRAYTIMER_KEY_PASSWORD")
+    signingConfigs {
+        if (releaseKeystorePath != null && releaseStorePassword != null &&
+            releaseKeyAlias != null && releaseKeyPassword != null
+        ) {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {

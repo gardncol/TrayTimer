@@ -30,10 +30,25 @@ jobs:
       - name: Install SDK packages
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Configure release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.TRAYTIMER_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.TRAYTIMER_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.TRAYTIMER_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.TRAYTIMER_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/traytimer-release.jks"
+          {
+            echo "TRAYTIMER_KEYSTORE=$RUNNER_TEMP/traytimer-release.jks"
+            echo "TRAYTIMER_STORE_PASSWORD=$STORE_PASSWORD"
+            echo "TRAYTIMER_KEY_ALIAS=$KEY_ALIAS"
+            echo "TRAYTIMER_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
       - name: Build APKs
         run: |
           chmod +x gradlew
-          ./gradlew assembleStandardDebug assembleDevDebug
+          ./gradlew assembleStandardRelease assembleDevRelease
 
       - name: Read version
         id: version
@@ -44,9 +59,9 @@ jobs:
       - name: Prepare release assets
         run: |
           mkdir -p release
-          cp app/build/outputs/apk/standard/debug/app-standard-debug.apk \
+          cp app/build/outputs/apk/standard/release/app-standard-release.apk \
              "release/TrayTimer-${{ steps.version.outputs.version }}-standard.apk"
-          cp app/build/outputs/apk/dev/debug/app-dev-debug.apk \
+          cp app/build/outputs/apk/dev/release/app-dev-release.apk \
              "release/TrayTimer-${{ steps.version.outputs.version }}-dev.apk"
 
       - name: Create GitHub release
@@ -57,7 +72,7 @@ jobs:
           body: |
             Automated build from commit `${{ github.sha }}`.
 
-            **Debug-signed APKs** — enable "install unknown apps" and install manually.
+            **Signed APKs** — enable "install unknown apps" and install manually. Releases use a stable signing key, so future versions update in place.
 
             - `TrayTimer-${{ steps.version.outputs.version }}-standard.apk` — package `com.traytimer`
             - `TrayTimer-${{ steps.version.outputs.version }}-dev.apk` — package `com.traytimer.dev` (installs alongside)

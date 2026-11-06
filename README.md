@@ -78,7 +78,7 @@ These are intentionally not implemented or are placeholders:
 - **No analytics/crash reporting** — the analytics facade only logs to Logcat.
 - **No network access of any kind:** the APK has no `INTERNET` permission. There is no update check, remote content, FAQ, analytics or social-media link. Brand templates ship inside the app.
 - **English only.**
-- Only **debug-signed** builds are configured; add a release signing config before publishing.
+- Release signing uses a self-signed project keystore (not Play App Signing); back up the keystore and passwords.
 - Not Play-Store ready: update the version, signing, policy disclosures, and review the permissions for your own release.
 
 ---
@@ -120,7 +120,7 @@ Or copy the APK to a device, allow "install unknown apps" for the file manager/b
 | standard | `com.traytimer` | TrayTimer |
 | dev | `com.traytimer.dev` | TrayTimer Dev |
 
-Version: `1.0.2` (`versionCode 3`), min SDK 26, target/compile SDK 35.
+Version: `1.0.3` (`versionCode 4`), min SDK 26, target/compile SDK 35.
 
 ---
 
