@@ -58,9 +58,12 @@ class AlarmRingingService : android.app.Service() {
                 .build()
         )
         if (player == null) {
-            val sound = com.traytimer.core.notifications.Channels.defaultAlarmSound(this)
-            player = MediaPlayer().apply {
-                setDataSource(this@AlarmRingingService, sound)
+            val storedSound = kotlinx.coroutines.runBlocking {
+                runCatching { com.traytimer.core.Graph.settingsStore.current().alarmSoundUri }
+                    .getOrDefault("")
+            }
+            fun makePlayer(uri: android.net.Uri): MediaPlayer = MediaPlayer().apply {
+                setDataSource(this@AlarmRingingService, uri)
                 setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_ALARM)
@@ -70,6 +73,12 @@ class AlarmRingingService : android.app.Service() {
                 isLooping = true
                 prepare()
                 start()
+            }
+            val chosen = com.traytimer.core.notifications.Channels.alarmSound(this, storedSound)
+            player = runCatching { makePlayer(chosen) }.getOrElse {
+                // The selected file may have been removed; fall back to the system alarm.
+                runCatching { makePlayer(com.traytimer.core.notifications.Channels.defaultAlarmSound(this)) }
+                    .getOrNull()
             }
         }
         vibrator = if (Build.VERSION.SDK_INT >= 31) {

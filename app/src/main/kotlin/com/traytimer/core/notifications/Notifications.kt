@@ -53,6 +53,47 @@ object Channels {
     fun defaultAlarmSound(context: Context): Uri =
         android.provider.Settings.System.DEFAULT_ALARM_ALERT_URI
             ?: android.provider.Settings.System.DEFAULT_NOTIFICATION_URI
+
+    /** Resolves the user-selected alarm sound, falling back to the system alarm. */
+    fun alarmSound(context: Context, uriString: String?): Uri {
+        if (!uriString.isNullOrBlank()) {
+            runCatching { return Uri.parse(uriString) }
+        }
+        return defaultAlarmSound(context)
+    }
+
+    /**
+     * Android preserves a channel's sound if the same channel id is recreated, so a
+     * custom sound gets its own channel id. Returns [ALARMS] for the default sound.
+     */
+    fun alarmChannelId(context: Context, uriString: String?): String {
+        if (uriString.isNullOrBlank()) return ALARMS
+        val uri = alarmSound(context, uriString)
+        if (uri == defaultAlarmSound(context)) return ALARMS
+        return "$ALARMS-${Integer.toHexString(uriString.hashCode())}"
+    }
+
+    /** Ensures the channel for the chosen alarm sound exists (and prunes old ones). */
+    fun ensureAlarmSound(context: Context, uriString: String?) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val id = alarmChannelId(context, uriString)
+        if (nm.getNotificationChannel(id) == null) {
+            nm.createNotificationChannel(
+                NotificationChannel(
+                    id,
+                    context.getString(R.string.channel_alarms),
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = context.getString(R.string.channel_alarms_desc)
+                    enableVibration(true)
+                    setSound(alarmSound(context, uriString), null)
+                }
+            )
+        }
+        nm.notificationChannels
+            .filter { it.id.startsWith("$ALARMS-") && it.id != id }
+            .forEach { nm.deleteNotificationChannel(it.id) }
+    }
 }
 
 object Notifications {
@@ -107,7 +148,7 @@ object Notifications {
      * screen with the screen turned on; when the user is actively using the device it
      * arrives as a heads-up notification.
      */
-    fun postPutBackAlarm(context: Context, outDuration: Long) {
+    fun postPutBackAlarm(context: Context, outDuration: Long, showFullScreen: Boolean, channelId: String) {
         val launch = Intent(context, AlarmActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra(AlarmActivity.EXTRA_KIND, AlarmActivity.KIND_PUT_BACK)
@@ -121,19 +162,20 @@ object Notifications {
             Intent(context, com.traytimer.reminders.ReminderReceiver::class.java).setAction(action),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val n = builder(context, Channels.ALARMS, true)
+        val n = builder(context, channelId, true)
             .setContentTitle(context.getString(R.string.alarm_title))
             .setContentText("Trays have been out for ${DayMath.formatHm(outDuration)}.")
             .setContentIntent(fullScreen)
-            .setFullScreenIntent(fullScreen, true)
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .addAction(0, "Start wearing", action(com.traytimer.reminders.AlarmScheduler.ACTION_START_WEARING, 5001))
             .addAction(0, "Add 5 min", action(com.traytimer.reminders.AlarmScheduler.ACTION_ADD_5, 5002))
             .addAction(0, "Add 10 min", action(com.traytimer.reminders.AlarmScheduler.ACTION_ADD_10, 5003))
-            .build()
-        post(context, NOTIF_PUT_BACK, n)
+        if (showFullScreen) {
+            n.setFullScreenIntent(fullScreen, true)
+        }
+        post(context, NOTIF_PUT_BACK, n.build())
     }
 
     fun postTrayChange(context: Context, nextLabel: String, timeSensitive: Boolean) {

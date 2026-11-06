@@ -23,3 +23,6 @@ TrayMinder_PRD.html
 
 # Logs / temp
 *.log
+
+# Agent collaboration
+TODO.md

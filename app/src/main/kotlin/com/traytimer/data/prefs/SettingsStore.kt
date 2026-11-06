@@ -41,6 +41,9 @@ data class AppSettings(
     val selfieReminderEnabled: Boolean = false,
     val timeSensitiveNotifications: Boolean = true,
     val notificationSound: Boolean = true,
+    val fullScreenAlarm: Boolean = true,
+    /** Ringtone URI for the ringing alarm; empty = system default alarm sound. */
+    val alarmSoundUri: String = "",
     val trayOffSnoozeSeconds: Int = 600,
     val trayChangeSnoozeSeconds: Int = 600,
     val selfieSnoozeSeconds: Int = 600,
@@ -102,6 +105,8 @@ object Keys {
     val SELFIE_ENABLED = booleanPreferencesKey("selfie_enabled")
     val TIME_SENSITIVE = booleanPreferencesKey("time_sensitive")
     val NOTIF_SOUND = booleanPreferencesKey("notif_sound")
+    val FULL_SCREEN_ALARM = booleanPreferencesKey("full_screen_alarm")
+    val ALARM_SOUND_URI = stringPreferencesKey("alarm_sound_uri")
     val TRAY_OFF_SNOOZE = intPreferencesKey("tray_off_snooze_seconds")
     val TRAY_CHANGE_SNOOZE = intPreferencesKey("tray_change_snooze_seconds")
     val SELFIE_SNOOZE = intPreferencesKey("selfie_snooze_seconds")
@@ -179,6 +184,8 @@ class SettingsStore(private val context: Context) {
             selfieReminderEnabled = get(Keys.SELFIE_ENABLED) ?: d.selfieReminderEnabled,
             timeSensitiveNotifications = get(Keys.TIME_SENSITIVE) ?: d.timeSensitiveNotifications,
             notificationSound = get(Keys.NOTIF_SOUND) ?: d.notificationSound,
+            fullScreenAlarm = get(Keys.FULL_SCREEN_ALARM) ?: d.fullScreenAlarm,
+            alarmSoundUri = get(Keys.ALARM_SOUND_URI) ?: d.alarmSoundUri,
             trayOffSnoozeSeconds = get(Keys.TRAY_OFF_SNOOZE) ?: d.trayOffSnoozeSeconds,
             trayChangeSnoozeSeconds = get(Keys.TRAY_CHANGE_SNOOZE) ?: d.trayChangeSnoozeSeconds,
             selfieSnoozeSeconds = get(Keys.SELFIE_SNOOZE) ?: d.selfieSnoozeSeconds,

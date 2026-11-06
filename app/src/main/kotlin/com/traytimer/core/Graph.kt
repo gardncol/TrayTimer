@@ -5,6 +5,7 @@ import com.traytimer.core.services.BrandsRepository
 import com.traytimer.data.db.AppDatabase
 import com.traytimer.data.prefs.SettingsStore
 import com.traytimer.data.repo.AppointmentRepository
+import com.traytimer.data.repo.DataPortRepository
 import com.traytimer.data.repo.PhotoRepository
 import com.traytimer.data.repo.TimerRepository
 import com.traytimer.data.repo.TreatmentRepository
@@ -21,6 +22,9 @@ object Graph {
     val treatmentRepository: TreatmentRepository by lazy { TreatmentRepository(database) }
     val appointmentRepository: AppointmentRepository by lazy { AppointmentRepository(database) }
     val photoRepository: PhotoRepository by lazy { PhotoRepository(appContext, database) }
+    val dataPortRepository: DataPortRepository by lazy {
+        DataPortRepository(appContext, database, photoRepository)
+    }
     val brandsRepository: BrandsRepository by lazy { BrandsRepository(appContext) }
 
     fun init(context: Context) {

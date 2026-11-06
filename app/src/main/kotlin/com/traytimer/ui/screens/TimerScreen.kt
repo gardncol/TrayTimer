@@ -20,8 +20,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -81,6 +85,7 @@ fun TimerScreen(
     var editMode by remember { mutableStateOf(false) }
     var editingSession by remember { mutableStateOf<OutSession?>(null) }
     var showAdjustTimer by remember { mutableStateOf(false) }
+    var showGoalDialog by remember { mutableStateOf(false) }
     var deletingSession by remember { mutableStateOf<OutSession?>(null) }
     var showReminderPrompt by remember { mutableStateOf(false) }
     // Non-null while the accidental-tap dialog is open; true = stop, false = start.
@@ -187,15 +192,35 @@ fun TimerScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            // ---- Goal adjuster (FR-TMR-04/05) ----
-            GoalAdjuster(
-                label = "Daily wear goal",
-                value = goalHours,
-                onChange = { vm.setGoalHours(it) },
-                min = 1,
-                max = 23,
-                hint = "Most orthodontists recommend 22 hours"
-            )
+            // ---- Daily goal summary; tap to adjust (FR-TMR-04/05) ----
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showGoalDialog = true }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.Flag,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Daily wear goal", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Most orthodontists recommend 22 hours",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+                Text("${goalHours}h", style = MaterialTheme.typography.titleLarge)
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = "Adjust daily wear goal",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+            }
 
             Spacer(Modifier.height(4.dp))
 
@@ -276,6 +301,14 @@ fun TimerScreen(
 
             Spacer(Modifier.height(80.dp))
         }
+    }
+
+    if (showGoalDialog) {
+        GoalDialog(
+            goalHours = goalHours,
+            onSet = { vm.setGoalHours(it) },
+            onDismiss = { showGoalDialog = false }
+        )
     }
 
     // ---- Put-back reminder prompt (FR-TMR-07) ----
@@ -375,13 +408,12 @@ fun TimerScreen(
 
 @Composable
 private fun TrayTotalText(vm: MainViewModel, timerState: MainViewModel.TimerState) {
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
     var total by remember { mutableStateOf(0L) }
     androidx.compose.runtime.LaunchedEffect(timerState.currentTray) {
         timerState.currentTray?.let { total = vm.wearForCurrentTray(it.orderIndex) }
     }
     Text(
-        "Total wear this aligner: ${DayMath.formatHm(total)}",
+        "Total time in this aligner: ${DayMath.formatHm(total)}",
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
     )
@@ -486,13 +518,56 @@ private fun WearRing(
 }
 
 @Composable
+private fun GoalDialog(goalHours: Int, onSet: (Int) -> Unit, onDismiss: () -> Unit) {
+    var value by remember { mutableStateOf(goalHours) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Daily wear goal") },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "Most orthodontists recommend 22 hours",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    IconButton(onClick = {
+                        if (value > 1) {
+                            value -= 1
+                            onSet(value)
+                        }
+                    }) { Icon(Icons.Default.Remove, contentDescription = "lower goal") }
+                    Text(
+                        "${value}h",
+                        style = MaterialTheme.typography.headlineLarge,
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    )
+                    IconButton(onClick = {
+                        if (value < 23) {
+                            value += 1
+                            onSet(value)
+                        }
+                    }) { Icon(Icons.Default.Add, contentDescription = "raise goal") }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } }
+    )
+}
+
+@Composable
 private fun PutBackReminderPrompt(onChoose: (Int?) -> Unit) {
     AlertDialog(
         onDismissRequest = { onChoose(null) },
         title = { Text("Put your aligners back in a reminder?") },
         text = {
             Column {
-                listOf(15, 30, 60).forEach { minutes ->
+                listOf(15, 30, 45, 60).forEach { minutes ->
                     TextButton(onClick = { onChoose(minutes) }, modifier = Modifier.fillMaxWidth()) {
                         Text("$minutes minutes")
                     }
@@ -505,7 +580,7 @@ private fun PutBackReminderPrompt(onChoose: (Int?) -> Unit) {
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                TextButton(
+                androidx.compose.material3.Button(
                     onClick = { customText.toIntOrNull()?.takeIf { it > 0 }?.let { onChoose(it) } },
                     enabled = customText.toIntOrNull()?.let { it > 0 } == true,
                     modifier = Modifier.fillMaxWidth()

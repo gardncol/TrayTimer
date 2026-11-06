@@ -1,11 +1,16 @@
 package com.traytimer.ui.screens
 
+import android.app.Activity
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ImportExport
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
@@ -40,12 +46,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.traytimer.core.Graph
+import com.traytimer.core.notifications.Channels
 import com.traytimer.data.prefs.Keys
 import com.traytimer.reminders.AlarmScheduler
 import com.traytimer.ui.nav.Routes
@@ -58,6 +66,7 @@ fun SettingsHubScreen(navController: NavHostController) {
         "Reminders" to Icons.Default.Alarm to Routes.SETTINGS_REMINDERS,
         "Notifications" to Icons.Default.Notifications to Routes.SETTINGS_NOTIFICATIONS,
         "Calendar" to Icons.Default.CalendarMonth to Routes.SETTINGS_CALENDAR,
+        "Data export & import" to Icons.Default.ImportExport to Routes.SETTINGS_DATA,
         "Live Updates" to Icons.Default.Tune to Routes.SETTINGS_LIVE,
         "Widgets" to Icons.Default.Tune to Routes.SETTINGS_WIDGETS,
         "Quick Settings" to Icons.Default.Tune to Routes.SETTINGS_TILE,
@@ -165,6 +174,25 @@ fun ReminderSettingsScreen(navController: NavHostController) {
     val context = LocalContext.current
     val settings by Graph.settingsStore.settings.collectAsState(initial = null)
     val s = settings ?: return
+
+    val soundPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            @Suppress("DEPRECATION")
+            val picked = result.data?.getParcelableExtra<Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            val stored = picked?.toString() ?: ""
+            Graph.settingsStore.update { _, p -> p[Keys.ALARM_SOUND_URI] = stored }
+            Channels.ensureAlarmSound(context, stored)
+        }
+    }
+    val alarmSoundName = remember(s.alarmSoundUri) {
+        runCatching {
+            val uri = Channels.alarmSound(context, s.alarmSoundUri)
+            RingtoneManager.getRingtone(context, uri)?.getTitle(context)
+        }.getOrNull() ?: "Default alarm sound"
+    }
+
     SettingsSubScreenScaffold("Reminders", navController) {
         SectionCard(Modifier.padding(vertical = 8.dp)) {
             NumberStepper(
@@ -213,6 +241,29 @@ fun ReminderSettingsScreen(navController: NavHostController) {
         SettingRow("Notification sound", checked = s.notificationSound) {
             Graph.settingsStore.update { st, p -> p[Keys.NOTIF_SOUND] = it }
         }
+        SettingRow(
+            "Full-screen alarm",
+            "Show the reminder over the lock screen and turn the screen on",
+            s.fullScreenAlarm
+        ) { enabled ->
+            Graph.settingsStore.update { st, p -> p[Keys.FULL_SCREEN_ALARM] = enabled }
+        }
+        LabeledRow("Alarm sound", alarmSoundName, onClick = {
+            val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                putExtra(
+                    RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI,
+                    android.provider.Settings.System.DEFAULT_ALARM_ALERT_URI
+                )
+                putExtra(
+                    RingtoneManager.EXTRA_RINGTONE_EXISTING_URI,
+                    Channels.alarmSound(context, s.alarmSoundUri)
+                )
+            }
+            runCatching { soundPicker.launch(intent) }
+        })
         SectionCard(Modifier.padding(vertical = 8.dp)) {
             Text("Snooze lengths", style = MaterialTheme.typography.titleMedium)
             NumberStepper("Trays-out snooze (s)", s.trayOffSnoozeSeconds,

@@ -8,6 +8,9 @@ import android.os.Build
 import android.app.NotificationManager
 import com.traytimer.core.Graph
 import com.traytimer.core.notifications.Channels
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class TrayTimerApp : Application() {
 
@@ -15,6 +18,14 @@ class TrayTimerApp : Application() {
         super.onCreate()
         Graph.init(this)
         Channels.createAll(this)
+        // Android keeps a channel's sound immutable, so make sure the channel that
+        // matches the stored alarm sound exists (custom sounds use their own id).
+        CoroutineScope(Dispatchers.IO).launch {
+            runCatching {
+                val settings = Graph.settingsStore.current()
+                Channels.ensureAlarmSound(this@TrayTimerApp, settings.alarmSoundUri)
+            }
+        }
         registerNotificationBlockReceiver()
     }
 

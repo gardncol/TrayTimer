@@ -123,6 +123,7 @@ fun AppRoot() {
         composable(Routes.SETTINGS_REMINDERS) { ReminderSettingsScreen(navController) }
         composable(Routes.SETTINGS_NOTIFICATIONS) { NotificationSettingsScreen(navController) }
         composable(Routes.SETTINGS_CALENDAR) { CalendarSettingsScreen(navController) }
+        composable(Routes.SETTINGS_DATA) { DataSettingsScreen(navController) }
         composable(Routes.SETTINGS_LIVE) { LiveUpdatesSettingsScreen(navController) }
         composable(Routes.SETTINGS_WIDGETS) { WidgetsSettingsScreen(navController) }
         composable(Routes.SETTINGS_TILE) { TileSettingsScreen(navController) }

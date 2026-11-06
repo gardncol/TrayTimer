@@ -36,6 +36,7 @@ object Routes {
     const val SETTINGS_REMINDERS = "settings/reminders"
     const val SETTINGS_NOTIFICATIONS = "settings/notifications"
     const val SETTINGS_CALENDAR = "settings/calendar"
+    const val SETTINGS_DATA = "settings/data"
     const val SETTINGS_LIVE = "settings/live"
     const val SETTINGS_WIDGETS = "settings/widgets"
     const val SETTINGS_TILE = "settings/tile"

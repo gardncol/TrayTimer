@@ -55,6 +55,8 @@ A clear-aligner wear-time tracker for Android: log when your trays are out, get 
 - **Full-screen wearing alarm** over the lock screen with a ringing foreground service.
 - Reminder notification actions: **Start wearing**, **Add 5 min**, **Add 10 min**.
 - Re-alerts every **5 minutes for the first 30 minutes**, then every **15 minutes** until answered.
+- Configurable **full-screen alarm** (or notification-only) and a selectable **alarm sound**.
+- **Export/import** all treatment data and photos as a local `.zip`.
 - Notification diagnostics, permission deep links, and OEM "don't kill my app" guidance.
 
 ### Android surfaces
@@ -118,7 +120,7 @@ Or copy the APK to a device, allow "install unknown apps" for the file manager/b
 | standard | `com.traytimer` | TrayTimer |
 | dev | `com.traytimer.dev` | TrayTimer Dev |
 
-Version: `1.0.1` (`versionCode 2`), min SDK 26, target/compile SDK 35.
+Version: `1.0.2` (`versionCode 3`), min SDK 26, target/compile SDK 35.
 
 ---
 

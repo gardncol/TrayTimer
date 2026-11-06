@@ -47,7 +47,12 @@ class ReminderReceiver : BroadcastReceiver() {
                 // first half hour, then every 15 min.
                 val cycleStart = if (settings.putBackCycleStart > 0) settings.putBackCycleStart else now
                 val next = now + ReminderCadence.nextDelayMillis(now - cycleStart)
-                Notifications.postPutBackAlarm(context, now - open.startEpoch)
+                Notifications.postPutBackAlarm(
+                    context,
+                    now - open.startEpoch,
+                    settings.fullScreenAlarm,
+                    com.traytimer.core.notifications.Channels.alarmChannelId(context, settings.alarmSoundUri)
+                )
                 Graph.settingsStore.updateAwait { st, p ->
                     p[com.traytimer.data.prefs.Keys.PUT_BACK_CYCLE_START] = cycleStart
                     p[com.traytimer.data.prefs.Keys.PUT_BACK_SESSION_START] = open.startEpoch
