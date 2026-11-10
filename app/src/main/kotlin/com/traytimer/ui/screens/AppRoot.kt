@@ -101,7 +101,11 @@ fun AppRoot() {
         composable(Routes.CAMERA) { CameraScreen(onDone = { navController.popBackStack() }) }
         composable(Routes.DAY) { entry ->
             val epochDay = entry.arguments?.getString("epochDay")?.toLongOrNull() ?: 0L
-            DayEventsScreen(epochDay = epochDay, onBack = { navController.popBackStack() })
+            DayEventsScreen(
+                epochDay = epochDay,
+                onBack = { navController.popBackStack() },
+                navController = navController
+            )
         }
         composable(Routes.ADD_EVENT) { entry ->
             val epochDay = entry.arguments?.getString("epochDay")?.toLongOrNull()
@@ -127,7 +131,6 @@ fun AppRoot() {
         composable(Routes.SETTINGS_LIVE) { LiveUpdatesSettingsScreen(navController) }
         composable(Routes.SETTINGS_WIDGETS) { WidgetsSettingsScreen(navController) }
         composable(Routes.SETTINGS_TILE) { TileSettingsScreen(navController) }
-        composable(Routes.SETTINGS_WATCH) { WatchSettingsScreen(navController) }
         composable(Routes.SETTINGS_VOICE) { VoiceSettingsScreen(navController) }
         composable(Routes.SETTINGS_PHOTOS) { PhotoSettingsScreen(navController) }
         composable(Routes.SETTINGS_APPEARANCE) { AppearanceSettingsScreen(navController) }

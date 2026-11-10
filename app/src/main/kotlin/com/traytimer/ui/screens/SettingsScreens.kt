@@ -34,18 +34,24 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Watch
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -70,11 +76,10 @@ fun SettingsHubScreen(navController: NavHostController) {
         "Live Updates" to Icons.Default.Tune to Routes.SETTINGS_LIVE,
         "Widgets" to Icons.Default.Tune to Routes.SETTINGS_WIDGETS,
         "Quick Settings" to Icons.Default.Tune to Routes.SETTINGS_TILE,
-        "Watch" to Icons.Default.Watch to Routes.SETTINGS_WATCH,
         "Voice commands" to Icons.Default.Timer to Routes.SETTINGS_VOICE,
         "Photos" to Icons.Default.CameraAlt to Routes.SETTINGS_PHOTOS,
         "Appearance" to Icons.Default.Palette to Routes.SETTINGS_APPEARANCE,
-        "Time & locale" to Icons.Default.Timer to Routes.SETTINGS_TIME,
+        "Time & Locale" to Icons.Default.Timer to Routes.SETTINGS_TIME,
         "Privacy" to Icons.Default.Payments to Routes.SETTINGS_ADS,
         "About" to Icons.Default.Info to Routes.SETTINGS_ABOUT
     )
@@ -169,11 +174,13 @@ fun TimerSettingsScreen(navController: NavHostController) {
 }
 
 /** FR-SET-02: reminder settings. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReminderSettingsScreen(navController: NavHostController) {
     val context = LocalContext.current
     val settings by Graph.settingsStore.settings.collectAsState(initial = null)
     val s = settings ?: return
+    var showTrayTimePicker by remember { mutableStateOf(false) }
 
     val soundPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -209,10 +216,7 @@ fun ReminderSettingsScreen(navController: NavHostController) {
             LabeledRow(
                 "Remind at",
                 "%02d:%02d".format(s.trayChangeReminderMinutesOfDay / 60, s.trayChangeReminderMinutesOfDay % 60),
-                onClick = {
-                    val next = (s.trayChangeReminderMinutesOfDay + 60) % (24 * 60)
-                    Graph.settingsStore.update { st, p -> p[Keys.TRAY_CHANGE_TIME] = next }
-                }
+                onClick = { showTrayTimePicker = true }
             )
         }
         SettingRow(
@@ -277,6 +281,30 @@ fun ReminderSettingsScreen(navController: NavHostController) {
             com.traytimer.widgets.WidgetRefresher.pushAll(context)
         }) { Text("Reschedule all reminders") }
     }
+
+    if (showTrayTimePicker) {
+        val state = rememberTimePickerState(
+            initialHour = s.trayChangeReminderMinutesOfDay / 60,
+            initialMinute = s.trayChangeReminderMinutesOfDay % 60,
+            is24Hour = true
+        )
+        AlertDialog(
+            onDismissRequest = { showTrayTimePicker = false },
+            title = { Text("Tray-change reminder time") },
+            text = { TimePicker(state = state) },
+            confirmButton = {
+                TextButton(onClick = {
+                    Graph.settingsStore.update { _, p ->
+                        p[Keys.TRAY_CHANGE_TIME] = state.hour * 60 + state.minute
+                    }
+                    showTrayTimePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTrayTimePicker = false }) { Text("Cancel") }
+            }
+        )
+    }
 }
 
 /** FR-SET-03: notification diagnostics + OEM guides. */
@@ -324,10 +352,10 @@ fun NotificationSettingsScreen(navController: NavHostController) {
             }) { Text("Open app notification settings") }
             Spacer(Modifier.height(6.dp))
             OutlinedButton(onClick = {
-                context.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                     data = android.net.Uri.parse("package:${context.packageName}")
                 })
-            }) { Text("Request battery exemption") }
+            }) { Text("Open app settings") }
         }
         Spacer(Modifier.height(6.dp))
         if (Build.VERSION.SDK_INT >= 31 && !exactOk) {

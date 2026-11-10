@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -308,13 +309,14 @@ private fun DayCell(
 /** Day editor (FR-CAL-02): retro-logging, notes, session list. */
 /** Read-only list of everything recorded for a selected day. */
 @Composable
-fun DayEventsScreen(epochDay: Long, onBack: () -> Unit) {
+fun DayEventsScreen(epochDay: Long, onBack: () -> Unit, navController: NavHostController) {
     val zone = ZoneId.systemDefault()
     val day = LocalDate.ofEpochDay(epochDay)
     val sessions by Graph.timerRepository.observeSessions().collectAsState(initial = emptyList())
     val appointments by Graph.appointmentRepository.observeAppointments().collectAsState(initial = emptyList())
     val settings by Graph.settingsStore.settings.collectAsState(initial = null)
     var note by remember { mutableStateOf<String?>(null) }
+    var showAddMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(epochDay) {
         note = Graph.appointmentRepository.noteForDay(epochDay)?.note
@@ -332,12 +334,13 @@ fun DayEventsScreen(epochDay: Long, onBack: () -> Unit) {
         .sortedBy { it.startEpoch }
     val inMillis = DayMath.inMillisForDay(epochDay, sessions, resetMinutes, zone)
 
-    Column(
-        Modifier
-            .systemBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
-    ) {
+    Box(Modifier.fillMaxSize()) {
+        Column(
+            Modifier
+                .systemBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+        ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "back")
@@ -405,11 +408,52 @@ fun DayEventsScreen(epochDay: Long, onBack: () -> Unit) {
         }
         Spacer(Modifier.height(12.dp))
         Text(
-            "Use + on the calendar to add an event, note or appointment.",
+            "Use + to add an event, note or appointment.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(96.dp))
+        }
+
+        ExtendedFloatingActionButton(
+            onClick = { showAddMenu = true },
+            icon = { Icon(Icons.Default.Add, contentDescription = null) },
+            text = { Text("Add") },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        )
+    }
+
+    if (showAddMenu) {
+        AlertDialog(
+            onDismissRequest = { showAddMenu = false },
+            title = { Text("Add to $day") },
+            text = {
+                Column {
+                    TextButton(onClick = {
+                        showAddMenu = false
+                        navController.navigate("add-event/${day.toEpochDay()}")
+                    }) { Text("Add out/in event") }
+                    TextButton(onClick = {
+                        showAddMenu = false
+                        navController.navigate("add-note/${day.toEpochDay()}")
+                    }) { Text("Day note") }
+                    TextButton(onClick = {
+                        showAddMenu = false
+                        navController.navigate("appointment/-1")
+                    }) { Text("Orthodontic appointment") }
+                    TextButton(onClick = {
+                        showAddMenu = false
+                        navController.navigate(com.traytimer.ui.nav.Routes.TREATMENT)
+                    }) { Text("Log aligner switch") }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showAddMenu = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 
@@ -495,7 +539,7 @@ fun AddEventScreen(initialEpochDay: Long, onBack: () -> Unit) {
                 Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             }
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(
+            Button(
                 onClick = {
                     scope.launch {
                         Graph.timerRepository.addOutSession(eventStart, eventEnd)

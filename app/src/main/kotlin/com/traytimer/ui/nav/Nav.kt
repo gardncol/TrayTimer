@@ -40,7 +40,6 @@ object Routes {
     const val SETTINGS_LIVE = "settings/live"
     const val SETTINGS_WIDGETS = "settings/widgets"
     const val SETTINGS_TILE = "settings/tile"
-    const val SETTINGS_WATCH = "settings/watch"
     const val SETTINGS_VOICE = "settings/voice"
     const val SETTINGS_PHOTOS = "settings/photos"
     const val SETTINGS_APPEARANCE = "settings/appearance"

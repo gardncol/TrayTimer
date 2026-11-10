@@ -23,7 +23,8 @@ A clear-aligner wear-time tracker for Android: log when your trays are out, get 
 - One-tap **trays out / trays in** toggle; ring is **blue while wearing** and **red while trays are out**.
 - **Undo**, edit, and delete time entries (with confirmation).
 - **Running timer adjustment:** tap *Adjust* while trays are out, choose 15/30/45/60/90 minutes or a custom duration, and the timer resets to that much **time remaining** — the original out time is preserved.
-- Put-back reminder choice when you take trays out (15/30/60 min, custom, or none).
+- Put-back reminder choice when you take trays out (15/30/45/60 min, custom, or none).
+- **Brushing mode:** a 2-minute full-screen countdown that marks trays out when it starts and back in when it ends (cancelling leaves them out).
 
 ### Treatment plan
 - Phases: initial aligners, refinements, retainers.
@@ -74,7 +75,7 @@ A clear-aligner wear-time tracker for Android: log when your trays are out, get 
 These are intentionally not implemented or are placeholders:
 
 - **No cloud backend / sync / backup.** All data is local (Room + DataStore). Uninstalling the app deletes it. Use *Photos → Export photos* for images.
-- **No Wear OS companion** (Settings shows a placeholder).
+- **No Wear OS companion.**
 - **No analytics/crash reporting** — the analytics facade only logs to Logcat.
 - **No network access of any kind:** the APK has no `INTERNET` permission. There is no update check, remote content, FAQ, analytics or social-media link. Brand templates ship inside the app.
 - **English only.**
@@ -120,7 +121,7 @@ Or copy the APK to a device, allow "install unknown apps" for the file manager/b
 | standard | `com.traytimer` | TrayTimer |
 | dev | `com.traytimer.dev` | TrayTimer Dev |
 
-Version: `1.0.3` (`versionCode 4`), min SDK 26, target/compile SDK 35.
+Version: `1.0.4` (`versionCode 5`), min SDK 26, target/compile SDK 35.
 
 ---
 

@@ -80,6 +80,13 @@
             android:turnScreenOn="true"
             android:theme="@style/Theme.TrayTimer.Alarm" />
 
+        <!-- ============ Brushing mode (2-minute full-screen timer) ============ -->
+        <activity
+            android:name=".ui.brushing.BrushingActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.TrayTimer.Alarm" />
+
         <!-- ============ Foreground services ============ -->
         <!-- Rings while a full-screen wearing reminder is active (FR-REM-07) -->
         <service

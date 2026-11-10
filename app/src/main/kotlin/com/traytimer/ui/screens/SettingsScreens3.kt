@@ -139,24 +139,6 @@ fun TileSettingsScreen(navController: NavHostController) {
     }
 }
 
-/** FR-SET-09 + FR-WEAR-* (not bundled in this build). */
-@Composable
-fun WatchSettingsScreen(navController: NavHostController) {
-    SettingsSubScreenScaffold("Watch", navController) {
-        Text(
-            "A Wear OS companion app is not included in this build.",
-            style = MaterialTheme.typography.bodyLarge
-        )
-        Spacer(Modifier.height(8.dp))
-        Text("Watch synced", style = MaterialTheme.typography.titleMedium)
-        Text(
-            "When a watch app is available, pausing from the watch will update the phone's Timer tab, Live Update notification and widgets.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-        )
-    }
-}
-
 /** FR-SET-10 + FR-VOX-02: browsable voice phrases. */
 @Composable
 fun VoiceSettingsScreen(navController: NavHostController) {
@@ -270,7 +252,16 @@ fun TimeSettingsScreen(navController: NavHostController) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val settings by Graph.settingsStore.settings.collectAsState(initial = null)
     val s = settings ?: return
-    SettingsSubScreenScaffold("Time & locale", navController) {
+    val currentZone = if (s.useDeviceTimeZone) {
+        java.time.ZoneId.systemDefault().id
+    } else {
+        s.chosenTimeZone.ifBlank { java.time.ZoneId.systemDefault().id }
+    }
+    SettingsSubScreenScaffold("Time & Locale", navController) {
+        LabeledRow(
+            "Time zone",
+            currentZone + if (s.useDeviceTimeZone) " (device)" else ""
+        )
         SettingRow("Use device time zone", checked = s.useDeviceTimeZone) { use ->
             Graph.settingsStore.update { st, p -> p[Keys.USE_DEVICE_TZ] = use }
         }

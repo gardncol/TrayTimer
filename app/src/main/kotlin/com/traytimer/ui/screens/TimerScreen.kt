@@ -1,5 +1,6 @@
 package com.traytimer.ui.screens
 
+import android.content.Intent
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -51,6 +54,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -62,6 +66,7 @@ import com.traytimer.core.notifications.Notifications
 import com.traytimer.data.db.OutSession
 import com.traytimer.reminders.AlarmScheduler
 import com.traytimer.ui.MainViewModel
+import com.traytimer.ui.brushing.BrushingActivity
 import com.traytimer.ui.nav.Routes
 import com.traytimer.ui.nav.TabBus
 import com.traytimer.ui.theme.GrayOut
@@ -81,6 +86,7 @@ fun TimerScreen(
     val timerState by vm.timerState.collectAsState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val view = LocalView.current
+    val context = LocalContext.current
 
     var editMode by remember { mutableStateOf(false) }
     var editingSession by remember { mutableStateOf<OutSession?>(null) }
@@ -131,7 +137,8 @@ fun TimerScreen(
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(260.dp)
+                    .fillMaxWidth(0.92f)
+                    .aspectRatio(1f)
                     .clickable {
                         val willStop = timerState.openSession != null
                         if (confirmNeeded(timerState, settings)) {
@@ -157,7 +164,7 @@ fun TimerScreen(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     Text(
                         DayMath.formatHm(timerState.inMillis, settings?.timerShowSeconds ?: false),
-                        style = MaterialTheme.typography.displayLarge,
+                        style = MaterialTheme.typography.headlineLarge,
                         color = stateColor
                     )
                     Text(
@@ -190,7 +197,7 @@ fun TimerScreen(
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(20.dp))
 
             // ---- Daily goal summary; tap to adjust (FR-TMR-04/05) ----
             Row(
@@ -239,6 +246,21 @@ fun TimerScreen(
                     Spacer(Modifier.width(6.dp))
                     Text(if (editMode) "Done" else "Edit")
                 }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            OutlinedButton(
+                onClick = {
+                    context.startActivity(
+                        Intent(context, BrushingActivity::class.java)
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Brush, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Brushing mode · 2 min")
             }
 
             Spacer(Modifier.height(8.dp))
