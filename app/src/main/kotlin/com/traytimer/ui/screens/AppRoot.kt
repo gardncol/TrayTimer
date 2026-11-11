@@ -161,6 +161,7 @@ fun MainScaffold(navController: NavHostController) {
     val vm: MainViewModel = viewModel()
     val context = LocalContext.current
     val settings by vm.settings.collectAsState()
+    val trays by vm.trays.collectAsState()
     val selectedTab by TabBus.tab.collectAsState()
 
     // ---- Notification permission priming (FR-REM-17) ----
@@ -229,6 +230,36 @@ fun MainScaffold(navController: NavHostController) {
                     }
                     pendingZone = null
                 }) { Text("No") }
+            }
+        )
+    }
+
+    // ---- In-app tray-change popover (mirrors the tray-change notification) ----
+    val trayChangeDue = settings?.trayChangeDueAt ?: 0L
+    if (trayChangeDue > 0L) {
+        val sortedTrays = com.traytimer.core.logic.PlanEngine.sorted(trays)
+        val zone = vm.zone(settings)
+        val todayMidnight = java.time.LocalDate.now(zone)
+            .atStartOfDay(zone).toInstant().toEpochMilli()
+        val idx = com.traytimer.core.logic.PlanEngine.currentIndex(sortedTrays, todayMidnight)
+        val next = sortedTrays.getOrNull(idx + 1)
+        AlertDialog(
+            onDismissRequest = { vm.snoozeTrayChange() },
+            title = { Text("Time to change your aligner") },
+            text = {
+                Text(
+                    if (next != null) {
+                        "Your current tray has reached its planned duration. Switch to aligner ${next.label} now?"
+                    } else {
+                        "Your current tray has reached its planned duration."
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { vm.changeToNextTrayNow() }) { Text("Change now") }
+            },
+            dismissButton = {
+                TextButton(onClick = { vm.snoozeTrayChange() }) { Text("Later") }
             }
         )
     }

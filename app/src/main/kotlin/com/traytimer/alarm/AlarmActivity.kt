@@ -2,6 +2,7 @@ package com.traytimer.alarm
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -21,6 +22,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +54,8 @@ class AlarmActivity : ComponentActivity() {
     }
 
     private val scope = CoroutineScope(Dispatchers.IO)
+    /** True after the patient silences the sound; the full-screen notice stays. */
+    private val muted = androidx.compose.runtime.mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,14 +77,47 @@ class AlarmActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 AlarmScreen(
+                    muted = muted.value,
                     onWearing = { finishWithAction { wornNow() } },
                     onBrush = { brushTeeth() },
                     onAdd5 = { finishWithAction { extend(5) } },
                     onAdd10 = { finishWithAction { extend(10) } },
-                    onDismiss = { finishWithAction { dismiss() } }
+                    onDismiss = { finishWithAction { dismiss() } },
+                    onMute = { muteAlarm() },
+                    onUnmute = { unmuteAlarm() }
                 )
             }
         }
+    }
+
+    /** Silences the ringtone/vibration but keeps the full-screen reminder visible. */
+    private fun muteAlarm() {
+        if (muted.value) return
+        muted.value = true
+        AlarmRingingService.stop(this)
+    }
+
+    private fun unmuteAlarm() {
+        if (!muted.value) return
+        muted.value = false
+        AlarmRingingService.start(this)
+    }
+
+    /** Volume-down mutes (volume-up restores), without leaving the alarm screen. */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean = when (keyCode) {
+        KeyEvent.KEYCODE_VOLUME_DOWN -> {
+            muteAlarm()
+            true
+        }
+        KeyEvent.KEYCODE_VOLUME_UP -> {
+            if (muted.value) {
+                unmuteAlarm()
+                true
+            } else {
+                super.onKeyDown(keyCode, event)
+            }
+        }
+        else -> super.onKeyDown(keyCode, event)
     }
 
     private fun finishWithAction(action: suspend () -> Unit) {
@@ -157,11 +194,14 @@ class AlarmActivity : ComponentActivity() {
 
 @Composable
 private fun AlarmScreen(
+    muted: Boolean,
     onWearing: () -> Unit,
     onBrush: () -> Unit,
     onAdd5: () -> Unit,
     onAdd10: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onMute: () -> Unit,
+    onUnmute: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -193,7 +233,23 @@ private fun AlarmScreen(
                 fontSize = 16.sp,
                 textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.height(8.dp))
+            if (muted) {
+                Text(
+                    text = "Alarm muted — the reminder stays on screen.",
+                    color = Color(0xFF80CBC4),
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
+                )
+                TextButton(onClick = onUnmute) {
+                    Text("Unmute alarm", color = Color(0xFF5EEAD4))
+                }
+            } else {
+                TextButton(onClick = onMute) {
+                    Text("🔇 Mute alarm (or press volume down)", color = Color(0xFF80CBC4))
+                }
+            }
+            Spacer(Modifier.height(8.dp))
             Button(
                 onClick = onWearing,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2DD4BF)),

@@ -139,7 +139,7 @@ fun TimerScreen(
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .fillMaxWidth(0.92f)
+                    .fillMaxWidth(0.96f)
                     .aspectRatio(1f)
                     .clickable {
                         val willStop = timerState.openSession != null
@@ -435,7 +435,11 @@ fun TimerScreen(
 private fun TrayTotalText(vm: MainViewModel, timerState: MainViewModel.TimerState) {
     var total by remember { mutableStateOf(0L) }
     androidx.compose.runtime.LaunchedEffect(timerState.currentTray) {
-        timerState.currentTray?.let { total = vm.wearForCurrentTray(it.orderIndex) }
+        val tray = timerState.currentTray ?: return@LaunchedEffect
+        while (true) {
+            total = vm.wearForCurrentTray(tray.orderIndex)
+            kotlinx.coroutines.delay(30_000L)
+        }
     }
     Text(
         "Total time in this aligner: ${DayMath.formatHm(total)}",
@@ -480,7 +484,8 @@ private fun WearRing(
 ) {
     val trackColor = Color.Gray.copy(alpha = 0.25f)
     Canvas(modifier = modifier) {
-        val stroke = 26f
+        // Thicker ring so the wear/out arcs are easier to read at a glance.
+        val stroke = 38f
         val inset = stroke
         val sizeArc = Size(this.size.width - inset * 2, this.size.height - inset * 2)
         val topLeft = Offset(inset, inset)

@@ -1,6 +1,7 @@
 package com.traytimer.core.logic
 
 import com.traytimer.data.db.PlanTray
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -75,13 +76,18 @@ object PlanEngine {
         return out
     }
 
-    /** Index of the tray currently worn (last tray whose effective start <= today), or first. */
+    /**
+     * Index of the tray currently worn (last tray whose effective start falls on or
+     * before today), or first. A switch logged at 08:00 today is the current tray for
+     * the whole day, so the cutoff is the end of the day rather than midnight.
+     */
     fun currentIndex(trays: List<PlanTray>, todayEpoch: Long): Int {
         val sorted = sorted(trays)
         if (sorted.isEmpty()) return -1
+        val cutoff = todayEpoch + DayMath.MILLIS_PER_DAY
         var idx = 0
         for ((i, t) in sorted.withIndex()) {
-            if (effectiveStart(t) <= todayEpoch) idx = i
+            if (effectiveStart(t) < cutoff) idx = i
         }
         return idx
     }
@@ -112,17 +118,30 @@ object PlanEngine {
     }
 
     /** Detect how a switch to [targetIndex] on [day] relates to the plan. */
-    fun classifySwitch(trays: List<PlanTray>, targetIndex: Int, switchEpoch: Long): SwitchKind {
+    fun classifySwitch(
+        trays: List<PlanTray>,
+        targetIndex: Int,
+        switchEpoch: Long,
+        zone: ZoneId = ZoneId.systemDefault()
+    ): SwitchKind {
         val sorted = sorted(trays)
         val target = sorted.getOrNull(targetIndex) ?: return SwitchKind.OnSchedule
-        val currentIdx = currentIndex(trays, switchEpoch)
+        val switchDayStart = Instant.ofEpochMilli(switchEpoch)
+            .atZone(zone).toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
+        val currentIdx = currentIndex(trays, switchDayStart)
         if (currentIdx in sorted.indices && currentIdx > targetIndex) return SwitchKind.Backward
         val planned = target.plannedStartEpoch
+        // Planned starts are stored at local midnight, while logged switches carry the
+        // real wall-clock time. Compare dates so changing tray at 08:00 on the planned
+        // day is still "on schedule" instead of "late".
+        val plannedDay = Instant.ofEpochMilli(planned).atZone(zone).toLocalDate().toEpochDay()
+        val switchDay = Instant.ofEpochMilli(switchEpoch).atZone(zone).toLocalDate().toEpochDay()
         return when {
-            switchEpoch < planned - NEAR_BOUNDARY_MILLIS -> SwitchKind.Early
-            switchEpoch < planned -> SwitchKind.NearBoundary
-            switchEpoch > planned -> SwitchKind.Late
-            else -> SwitchKind.OnSchedule
+            switchDay > plannedDay -> SwitchKind.Late
+            switchDay == plannedDay -> SwitchKind.OnSchedule
+            switchDay == plannedDay - 1 && switchEpoch > planned - NEAR_BOUNDARY_MILLIS ->
+                SwitchKind.NearBoundary
+            else -> SwitchKind.Early
         }
     }
 

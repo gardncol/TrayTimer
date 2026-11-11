@@ -174,9 +174,38 @@ class CoreLogicTest {
     fun `early switch is classified correctly`() {
         val trays = plan(total = 10, current = 1, days = 7)
         val plannedStartTray3 = PlanEngine.sorted(trays)[2].plannedStartEpoch
-        assertEquals(PlanEngine.SwitchKind.Early, PlanEngine.classifySwitch(trays, 2, plannedStartTray3 - 2 * DayMath.MILLIS_PER_DAY))
-        assertEquals(PlanEngine.SwitchKind.Late, PlanEngine.classifySwitch(trays, 2, plannedStartTray3 + 2 * DayMath.MILLIS_PER_DAY))
-        assertEquals(PlanEngine.SwitchKind.NearBoundary, PlanEngine.classifySwitch(trays, 2, plannedStartTray3 - 3_600_000L))
+        assertEquals(PlanEngine.SwitchKind.Early, PlanEngine.classifySwitch(trays, 2, plannedStartTray3 - 2 * DayMath.MILLIS_PER_DAY, utc))
+        assertEquals(PlanEngine.SwitchKind.Late, PlanEngine.classifySwitch(trays, 2, plannedStartTray3 + 2 * DayMath.MILLIS_PER_DAY, utc))
+        assertEquals(PlanEngine.SwitchKind.NearBoundary, PlanEngine.classifySwitch(trays, 2, plannedStartTray3 - 3_600_000L, utc))
+    }
+
+    @Test
+    fun `same-day switch is on schedule even at a wall-clock time`() {
+        val trays = plan(total = 3, current = 1, days = 7)
+        val planned = PlanEngine.sorted(trays)[1].plannedStartEpoch
+        assertEquals(
+            PlanEngine.SwitchKind.OnSchedule,
+            PlanEngine.classifySwitch(trays, 1, planned + 8 * 3_600_000L, utc)
+        )
+    }
+
+    @Test
+    fun `switch logged mid-day starts that tray's wear at the logged time`() {
+        val trays = PlanEngine.buildPlan(4, 1, 7, at(day, 0))
+        val switchAt = at(day.plusDays(7), 8) // 08:00 on the day tray 2 starts
+        val updated = PlanEngine.applySwitch(trays, targetIndex = 1, switchEpoch = switchAt, autoAdjust = false)
+
+        // The new tray is current for the whole switch day, not only from tomorrow.
+        assertEquals(1, PlanEngine.currentIndex(updated, at(day.plusDays(7), 0)))
+
+        // Wear is credited from 08:00, so 10:00 has 2h on the new tray...
+        val now = at(day.plusDays(7), 10)
+        val wearNew = StatsCalc.wearForTray(emptyList(), updated, trayOrderIndex = 1, resetMinutes = 0, now = now)
+        assertEquals(2 * 3_600_000L, wearNew)
+
+        // ...and the previous tray ends exactly at the switch instant.
+        val wearPrev = StatsCalc.wearForTray(emptyList(), updated, trayOrderIndex = 0, resetMinutes = 0, now = now)
+        assertEquals(7 * DayMath.MILLIS_PER_DAY + 8 * 3_600_000L, wearPrev)
     }
 
     @Test

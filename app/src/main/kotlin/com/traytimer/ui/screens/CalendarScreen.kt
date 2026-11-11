@@ -227,8 +227,11 @@ private fun trayLabelForDay(trays: List<com.traytimer.data.db.PlanTray>, day: Lo
     val epoch = day.atStartOfDay(zone).toInstant().toEpochMilli()
     val sorted = com.traytimer.core.logic.PlanEngine.sorted(trays)
     val current = com.traytimer.core.logic.PlanEngine.currentTray(sorted, epoch) ?: return null
-    // Only label days where the tray actually changes (start of a new tray)
-    return if (com.traytimer.core.logic.PlanEngine.effectiveStart(current) == epoch) current.label else null
+    // Only label days where the tray actually changes (start of a new tray). Compare
+    // calendar days so a switch logged at e.g. 08:00 still marks that day.
+    val startDay = com.traytimer.core.logic.DayMath
+        .dateAt(com.traytimer.core.logic.PlanEngine.effectiveStart(current), zone)
+    return if (startDay == day) current.label else null
 }
 
 @Composable

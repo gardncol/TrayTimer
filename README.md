@@ -30,6 +30,8 @@ A clear-aligner wear-time tracker for Android: log when your trays are out, get 
 - Phases: initial aligners, refinements, retainers.
 - Per-aligner durations with "apply to subsequent aligners".
 - Early / late / backward tray-change detection with confirmations.
+- Exact switch timestamps: wear time for a new aligner starts when you actually change trays, not at midnight.
+- Tray-change reminder at the planned day/time, with an actionable notification and an in-app **Change now / Later** popover.
 - Automatic Treatment Adjustment (recalculates subsequent trays on early/late switches).
 - **Rebuild plan** action to re-anchor the current aligner to today.
 - Per-aligner cumulative wear, plan summary, and deletion that keeps history.
@@ -54,6 +56,7 @@ A clear-aligner wear-time tracker for Android: log when your trays are out, get 
 - Exact alarms with graceful fallback, plus boot / time-zone recovery.
 - Put-back, tray-change, tray-total, selfie, and appointment reminders.
 - **Full-screen wearing alarm** over the lock screen with a ringing foreground service.
+- Mute a ringing alarm with the on-screen **Mute** button or the volume-down key; the full-screen reminder stays visible.
 - Reminder notification actions: **Start wearing**, **Add 5 min**, **Add 10 min**.
 - Re-alerts every **5 minutes for the first 30 minutes**, then every **15 minutes** until answered.
 - Configurable **full-screen alarm** (or notification-only) and a selectable **alarm sound**.
@@ -121,7 +124,7 @@ Or copy the APK to a device, allow "install unknown apps" for the file manager/b
 | standard | `com.traytimer` | TrayTimer |
 | dev | `com.traytimer.dev` | TrayTimer Dev |
 
-Version: `1.0.5` (`versionCode 6`), min SDK 26, target/compile SDK 35.
+Version: `1.0.6` (`versionCode 7`), min SDK 26, target/compile SDK 35.
 
 ---
 

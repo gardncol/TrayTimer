@@ -271,6 +271,54 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
+    // ---------- tray change popover ----------
+
+    private var trayChangeInFlight = false
+
+    /** Confirms the due tray change from the in-app popover. */
+    fun changeToNextTrayNow() {
+        if (trayChangeInFlight) return
+        trayChangeInFlight = true
+        viewModelScope.launch {
+            try {
+                val s = settingsStore.current()
+                val todayMidnight = LocalDate.now(zone(s)).atStartOfDay(zone(s)).toInstant().toEpochMilli()
+                val trays = treatmentRepo.getTrays()
+                val idx = PlanEngine.currentIndex(trays, todayMidnight)
+                val next = idx + 1
+                if (next < PlanEngine.sorted(trays).size) {
+                    treatmentRepo.logSwitch(next, System.currentTimeMillis(), s.autoAdjustEnabled)
+                }
+                settingsStore.updateAwait { _, p ->
+                    p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_DUE_AT] = 0L
+                    p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_SNOOZE_AT] = 0L
+                    p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_DUE_FOR] = -1
+                }
+                Notifications.cancel(getApplication(), Notifications.NOTIF_TRAY_CHANGE)
+                Analytics.log("tray_changed_from_popover")
+                afterTimerChange()
+            } finally {
+                trayChangeInFlight = false
+            }
+        }
+    }
+
+    /** "Later" on the tray-change popover: re-nudge after the snooze interval. */
+    fun snoozeTrayChange() {
+        viewModelScope.launch {
+            val s = settingsStore.current()
+            settingsStore.updateAwait { _, p ->
+                p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_DUE_AT] = 0L
+                p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_SNOOZE_AT] =
+                    System.currentTimeMillis() + s.trayChangeSnoozeSeconds * 1000L
+                p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_DUE_FOR] = -1
+            }
+            Notifications.cancel(getApplication(), Notifications.NOTIF_TRAY_CHANGE)
+            AlarmScheduler.rescheduleAll(getApplication())
+            Analytics.log("tray_change_snoozed")
+        }
+    }
+
     // ---------- notifications / permission helpers ----------
 
     fun cancelPutBackNotification() {

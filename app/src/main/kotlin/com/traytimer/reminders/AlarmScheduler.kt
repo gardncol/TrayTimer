@@ -144,17 +144,45 @@ object AlarmScheduler {
             if (trigger > now) schedulePutBack(context, trigger)
         }
 
-        // --- Tray-change alarm: current tray planned end at reminder time of day ---
+        // --- Tray-change alarm: planned change day at the reminder time of day ---
         cancelTrayChange(context)
         val trays = Graph.treatmentRepository.getTrays()
         val todayMidnight = LocalDate.now(zone).atStartOfDay(zone).toInstant().toEpochMilli()
         val current = PlanEngine.currentTray(trays, todayMidnight)
         if (current != null && s.trayChangeReminderEnabled) {
-            val plannedEnd = PlanEngine.effectiveEnd(current)
-            val endDay: LocalDate = Instant.ofEpochMilli(plannedEnd - 1).atZone(zone).toLocalDate()
+            // The plan's end instant IS the change moment (e.g. 08:00 on the switch
+            // day), so use that calendar day rather than the day before.
+            val changeDay: LocalDate = Instant.ofEpochMilli(PlanEngine.effectiveEnd(current))
+                .atZone(zone).toLocalDate()
             val t = LocalTime.of(s.trayChangeReminderMinutesOfDay / 60, s.trayChangeReminderMinutesOfDay % 60)
-            val trigger = endDay.atTime(t).atZone(zone).toInstant().toEpochMilli()
+            val plannedTrigger = changeDay.atTime(t).atZone(zone).toInstant().toEpochMilli()
+            val trigger = when {
+                s.trayChangeSnoozeAt > now -> s.trayChangeSnoozeAt
+                plannedTrigger > now -> plannedTrigger
+                else -> {
+                    // Overdue (e.g. the app was off): nudge at the next occurrence.
+                    var day = LocalDate.now(zone)
+                    var at = day.atTime(t).atZone(zone).toInstant().toEpochMilli()
+                    if (at <= now) {
+                        day = day.plusDays(1)
+                        at = day.atTime(t).atZone(zone).toInstant().toEpochMilli()
+                    }
+                    at
+                }
+            }
             if (trigger > now) scheduleTrayChange(context, trigger)
+
+            // Once the patient actually moves to another tray, drop the pending
+            // popover (it belongs to the tray they were being reminded about).
+            if (s.trayChangeDueAt > 0 && s.trayChangeDueFor >= 0 &&
+                current.orderIndex != s.trayChangeDueFor
+            ) {
+                Graph.settingsStore.updateAwait { _, p ->
+                    p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_DUE_AT] = 0L
+                    p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_SNOOZE_AT] = 0L
+                    p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_DUE_FOR] = -1
+                }
+            }
         }
 
         // --- Tray-total alarm: cumulative wear vs plan hours (FR-REM-03) ---

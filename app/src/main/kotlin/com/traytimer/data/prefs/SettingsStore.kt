@@ -82,7 +82,13 @@ data class AppSettings(
     val putBackDecided: Boolean = false,
     val putBackCycleStart: Long = 0L,
     /** Target end of the current trays-out timer (for the on-screen countdown). */
-    val breakTargetAtEpoch: Long = 0L
+    val breakTargetAtEpoch: Long = 0L,
+    /** Set when the tray-change reminder fires; the app shows a popover while > 0. */
+    val trayChangeDueAt: Long = 0L,
+    /** "Remind me later" for the tray change popover (next alarm trigger). */
+    val trayChangeSnoozeAt: Long = 0L,
+    /** orderIndex of the tray that triggered the pending change reminder. */
+    val trayChangeDueFor: Int = -1
 )
 
 object Keys {
@@ -134,6 +140,9 @@ object Keys {
     val PUT_BACK_DECIDED = booleanPreferencesKey("put_back_decided")
     val PUT_BACK_CYCLE_START = longPreferencesKey("put_back_cycle_start")
     val BREAK_TARGET_AT = longPreferencesKey("break_target_at")
+    val TRAY_CHANGE_DUE_AT = longPreferencesKey("tray_change_due_at")
+    val TRAY_CHANGE_SNOOZE_AT = longPreferencesKey("tray_change_snooze_at")
+    val TRAY_CHANGE_DUE_FOR = intPreferencesKey("tray_change_due_for")
 }
 
 class SettingsStore(private val context: Context) {
@@ -212,7 +221,10 @@ class SettingsStore(private val context: Context) {
             putBackAtEpoch = get(Keys.PUT_BACK_AT) ?: d.putBackAtEpoch,
             putBackDecided = get(Keys.PUT_BACK_DECIDED) ?: d.putBackDecided,
             putBackCycleStart = get(Keys.PUT_BACK_CYCLE_START) ?: d.putBackCycleStart,
-            breakTargetAtEpoch = get(Keys.BREAK_TARGET_AT) ?: d.breakTargetAtEpoch
+            breakTargetAtEpoch = get(Keys.BREAK_TARGET_AT) ?: d.breakTargetAtEpoch,
+            trayChangeDueAt = get(Keys.TRAY_CHANGE_DUE_AT) ?: d.trayChangeDueAt,
+            trayChangeSnoozeAt = get(Keys.TRAY_CHANGE_SNOOZE_AT) ?: d.trayChangeSnoozeAt,
+            trayChangeDueFor = get(Keys.TRAY_CHANGE_DUE_FOR) ?: d.trayChangeDueFor
         )
     }
 }

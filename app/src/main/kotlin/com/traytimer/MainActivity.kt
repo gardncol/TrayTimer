@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
         val trays = Graph.treatmentRepository.getTrays()
         val idx = com.traytimer.core.logic.PlanEngine.currentIndex(trays, today)
         if (idx + 1 < trays.size) {
-            Graph.treatmentRepository.logSwitch(idx + 1, today, s.autoAdjustEnabled)
+            Graph.treatmentRepository.logSwitch(idx + 1, System.currentTimeMillis(), s.autoAdjustEnabled)
             Analytics.log("tray_changed_from_voice")
             AlarmScheduler.rescheduleAll(this@MainActivity)
         }

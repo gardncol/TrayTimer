@@ -179,9 +179,16 @@ object Notifications {
     }
 
     fun postTrayChange(context: Context, nextLabel: String, timeSensitive: Boolean) {
+        val change = PendingIntent.getBroadcast(
+            context, 5101,
+            Intent(context, com.traytimer.reminders.ReminderReceiver::class.java)
+                .setAction(com.traytimer.reminders.AlarmScheduler.ACTION_CHANGE_TRAY_CONFIRM),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         val n = builder(context, Channels.REMINDERS, timeSensitive)
             .setContentTitle(context.getString(R.string.rem_tray_change_title))
-            .setContentText(context.getString(R.string.rem_tray_change_body))
+            .setContentText("Switch to aligner $nextLabel now.")
+            .addAction(0, "Change tray", change)
             .build()
         post(context, NOTIF_TRAY_CHANGE, n)
     }

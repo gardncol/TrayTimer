@@ -118,7 +118,16 @@ class ReminderReceiver : BroadcastReceiver() {
                 val current = PlanEngine.currentTray(trays, LocalDate.now(zone).atStartOfDay(zone).toInstant().toEpochMilli())
                 val next = PlanEngine.sorted(trays).getOrNull((current?.orderIndex ?: 0) + 1)
                 Notifications.postTrayChange(context, next?.label ?: "-", settings.timeSensitiveNotifications)
-                // keep scheduling the next one in case the patient didn't change yet
+                if (next != null) {
+                    // Mirror the notification as an in-app popover the next time the
+                    // app is in the foreground.
+                    Graph.settingsStore.updateAwait { _, p ->
+                        p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_DUE_AT] = System.currentTimeMillis()
+                        p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_SNOOZE_AT] = 0L
+                        p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_DUE_FOR] = current?.orderIndex ?: -1
+                    }
+                }
+                // Keep scheduling: a missed change re-nudges at the reminder time.
                 AlarmScheduler.rescheduleAll(context)
                 Analytics.log("reminder_tray_change_fired")
             }
@@ -174,9 +183,15 @@ class ReminderReceiver : BroadcastReceiver() {
         val idx = PlanEngine.currentIndex(trays, today)
         val next = idx + 1
         if (next < PlanEngine.sorted(trays).size) {
-            Graph.treatmentRepository.logSwitch(next, today, settings.autoAdjustEnabled)
+            Graph.treatmentRepository.logSwitch(next, System.currentTimeMillis(), settings.autoAdjustEnabled)
             Analytics.log("tray_changed_from_notification")
         }
+        Graph.settingsStore.updateAwait { _, p ->
+            p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_DUE_AT] = 0L
+            p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_SNOOZE_AT] = 0L
+            p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_DUE_FOR] = -1
+        }
+        Notifications.cancel(context, Notifications.NOTIF_TRAY_CHANGE)
         WidgetRefresher.pushAll(context)
         LiveUpdateService.refresh(context, wearing = true)
         AlarmScheduler.rescheduleAll(context)

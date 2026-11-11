@@ -123,7 +123,7 @@ fun TreatmentEditorScreen(onBack: () -> Unit) {
                 val next = currentIdx + 1
                 if (next < sorted.size) {
                     switchTarget = next
-                    switchDialogKind = PlanEngine.classifySwitch(sorted, next, today)
+                    switchDialogKind = PlanEngine.classifySwitch(sorted, next, System.currentTimeMillis(), zone)
                 }
             },
             modifier = Modifier
@@ -143,7 +143,7 @@ fun TreatmentEditorScreen(onBack: () -> Unit) {
                         today = today,
                         onTap = { editingTray = tray },
                         onSwitchHere = {
-                            val kind = PlanEngine.classifySwitch(sorted, tray.orderIndex, today)
+                            val kind = PlanEngine.classifySwitch(sorted, tray.orderIndex, System.currentTimeMillis(), zone)
                             switchTarget = tray.orderIndex
                             switchDialogKind = kind
                         }
@@ -225,7 +225,7 @@ fun TreatmentEditorScreen(onBack: () -> Unit) {
                 TextButton(onClick = {
                     scope.launch {
                         Graph.treatmentRepository.logSwitch(
-                            target, today, settings?.autoAdjustEnabled ?: false
+                            target, System.currentTimeMillis(), settings?.autoAdjustEnabled ?: false
                         )
                         Analytics.log("tray_switch_confirmed", mapOf("kind" to kind.javaClass.simpleName))
                         AlarmScheduler.rescheduleAll(context)
@@ -396,7 +396,13 @@ private fun TrayRow(
     onSwitchHere: () -> Unit
 ) {
     val fmt = DateTimeFormatter.ofPattern("MMM d, yyyy")
-    val startText = Instant.ofEpochMilli(plannedStart).atZone(ZoneId.systemDefault()).toLocalDate().format(fmt)
+    val startLabel = if (tray.actualStartEpoch != null) {
+        val full = DateTimeFormatter.ofPattern("MMM d, yyyy 'at' HH:mm")
+        "Started " + Instant.ofEpochMilli(plannedStart).atZone(ZoneId.systemDefault()).format(full)
+    } else {
+        "Planned " + Instant.ofEpochMilli(plannedStart).atZone(ZoneId.systemDefault())
+            .toLocalDate().format(fmt)
+    }
     val dayNum = ((today - plannedStart) / DayMath.MILLIS_PER_DAY).toInt() + 1
     Row(
         Modifier
@@ -414,7 +420,7 @@ private fun TrayRow(
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                "Planned $startText · ${tray.plannedDays} days",
+                "$startLabel · ${tray.plannedDays} days",
                 style = MaterialTheme.typography.bodyMedium
             )
             if (isCurrent) {
