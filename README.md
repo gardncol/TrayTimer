@@ -121,7 +121,7 @@ Or copy the APK to a device, allow "install unknown apps" for the file manager/b
 | standard | `com.traytimer` | TrayTimer |
 | dev | `com.traytimer.dev` | TrayTimer Dev |
 
-Version: `1.0.4` (`versionCode 5`), min SDK 26, target/compile SDK 35.
+Version: `1.0.5` (`versionCode 6`), min SDK 26, target/compile SDK 35.
 
 ---
 

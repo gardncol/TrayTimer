@@ -1,5 +1,6 @@
 package com.traytimer.alarm
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -31,6 +32,7 @@ import com.traytimer.core.Graph
 import com.traytimer.core.logic.DayMath
 import com.traytimer.core.notifications.Notifications
 import com.traytimer.reminders.AlarmScheduler
+import com.traytimer.ui.brushing.BrushingActivity
 import com.traytimer.reminders.ReminderReceiver
 import com.traytimer.widgets.WidgetRefresher
 import kotlinx.coroutines.CoroutineScope
@@ -72,6 +74,7 @@ class AlarmActivity : ComponentActivity() {
             MaterialTheme {
                 AlarmScreen(
                     onWearing = { finishWithAction { wornNow() } },
+                    onBrush = { brushTeeth() },
                     onAdd5 = { finishWithAction { extend(5) } },
                     onAdd10 = { finishWithAction { extend(10) } },
                     onDismiss = { finishWithAction { dismiss() } }
@@ -101,6 +104,14 @@ class AlarmActivity : ComponentActivity() {
         Notifications.cancel(this, Notifications.NOTIF_PUT_BACK)
         WidgetRefresher.pushAll(this)
         AlarmScheduler.rescheduleAll(this)
+    }
+
+    /** Launches the 2-minute brushing timer from the alarm (trays are already out). */
+    private fun brushTeeth() {
+        Notifications.cancel(this, Notifications.NOTIF_PUT_BACK)
+        AlarmRingingService.stop(this)
+        startActivity(Intent(this, BrushingActivity::class.java))
+        finish()
     }
 
     /** "Add 5 / 10 min": re-remind in N minutes while the trays stay out. */
@@ -147,6 +158,7 @@ class AlarmActivity : ComponentActivity() {
 @Composable
 private fun AlarmScreen(
     onWearing: () -> Unit,
+    onBrush: () -> Unit,
     onAdd5: () -> Unit,
     onAdd10: () -> Unit,
     onDismiss: () -> Unit
@@ -197,6 +209,16 @@ private fun AlarmScreen(
                 )
             }
             Spacer(Modifier.height(16.dp))
+            OutlinedButton(
+                onClick = onBrush,
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+            ) {
+                Text("Brush teeth (2 min)", color = Color(0xFF5EEAD4))
+            }
+            Spacer(Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)

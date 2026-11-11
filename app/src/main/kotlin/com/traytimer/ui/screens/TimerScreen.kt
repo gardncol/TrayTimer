@@ -23,7 +23,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -55,10 +54,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.traytimer.R
 import com.traytimer.core.Graph
 import com.traytimer.core.logic.Analytics
 import com.traytimer.core.logic.DayMath
@@ -164,7 +166,7 @@ fun TimerScreen(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     Text(
                         DayMath.formatHm(timerState.inMillis, settings?.timerShowSeconds ?: false),
-                        style = MaterialTheme.typography.headlineLarge,
+                        style = MaterialTheme.typography.headlineLarge.copy(fontSize = 44.sp),
                         color = stateColor
                     )
                     Text(
@@ -248,19 +250,20 @@ fun TimerScreen(
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
-
-            OutlinedButton(
-                onClick = {
-                    context.startActivity(
-                        Intent(context, BrushingActivity::class.java)
-                    )
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Brush, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Brushing mode · 2 min")
+            if (timerState.openSession != null) {
+                Spacer(Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = {
+                        context.startActivity(
+                            Intent(context, BrushingActivity::class.java)
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(painterResource(R.drawable.ic_toothbrush), contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Brushing mode · 2 min")
+                }
             }
 
             Spacer(Modifier.height(8.dp))
