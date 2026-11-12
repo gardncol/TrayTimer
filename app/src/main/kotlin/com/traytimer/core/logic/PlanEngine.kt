@@ -1,6 +1,7 @@
 package com.traytimer.core.logic
 
 import com.traytimer.data.db.PlanTray
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -26,15 +27,43 @@ object PlanEngine {
         currentAligner: Int,
         daysPerAligner: Int,
         startEpoch: Long,
-        labelPrefix: String = ""
+        labelPrefix: String = "",
+        /** 1=Monday .. 7=Sunday. Future trays are pinned to this weekday. */
+        switchDayOfWeek: Int? = null,
+        zone: ZoneId = ZoneId.systemDefault()
     ): List<PlanTray> {
         require(totalAligners > 0) { "totalAligners must be > 0" }
         require(currentAligner in 1..totalAligners) { "current out of range" }
         require(daysPerAligner > 0) { "daysPerAligner must be > 0" }
         val trays = ArrayList<PlanTray>(totalAligners)
-        for (i in 1..totalAligners) {
-            val offsetDays = (i - currentAligner).toLong() * daysPerAligner
-            val plannedStart = startEpoch + offsetDays * DayMath.MILLIS_PER_DAY
+
+        // Back-fill completed trays before the current one.
+        for (i in 1 until currentAligner) {
+            val plannedStart = startEpoch - (currentAligner - i).toLong() * daysPerAligner * DayMath.MILLIS_PER_DAY
+            trays.add(
+                PlanTray(
+                    phaseIndex = 0,
+                    phaseType = PHASE_INITIAL,
+                    label = labelPrefix + i,
+                    orderIndex = i - 1,
+                    plannedDays = daysPerAligner,
+                    plannedStartEpoch = plannedStart,
+                    completed = true
+                )
+            )
+        }
+
+        // Current + upcoming trays. Each future switch can be pinned to a weekday so a
+        // one-off switch day (e.g. Monday) does not move the rest of the plan off the
+        // patient's normal change day (e.g. Tuesdays).
+        var prevStart = startEpoch
+        for (i in currentAligner..totalAligners) {
+            val plannedStart = if (i == currentAligner) {
+                startEpoch
+            } else {
+                val base = prevStart + daysPerAligner * DayMath.MILLIS_PER_DAY
+                if (switchDayOfWeek == null) base else alignToWeekday(base, switchDayOfWeek, zone)
+            }
             trays.add(
                 PlanTray(
                     phaseIndex = 0,
@@ -44,11 +73,20 @@ object PlanEngine {
                     plannedDays = daysPerAligner,
                     plannedStartEpoch = plannedStart,
                     actualStartEpoch = if (i == currentAligner) startEpoch else null,
-                    completed = i < currentAligner
+                    completed = false
                 )
             )
+            prevStart = plannedStart
         }
         return trays
+    }
+
+    /** First occurrence of [dayOfWeek] on or after [epoch]'s local date, at local midnight. */
+    fun alignToWeekday(epoch: Long, dayOfWeek: Int, zone: ZoneId = ZoneId.systemDefault()): Long {
+        val target = DayOfWeek.of(dayOfWeek.coerceIn(1, 7))
+        var date = Instant.ofEpochMilli(epoch).atZone(zone).toLocalDate()
+        while (date.dayOfWeek != target) date = date.plusDays(1)
+        return date.atStartOfDay(zone).toInstant().toEpochMilli()
     }
 
     fun sorted(trays: List<PlanTray>): List<PlanTray> = trays.sortedBy { it.orderIndex }
@@ -59,6 +97,17 @@ object PlanEngine {
     fun effectiveStart(tray: PlanTray): Long = tray.actualStartEpoch ?: tray.plannedStartEpoch
 
     fun effectiveEnd(tray: PlanTray): Long = effectiveStart(tray) + tray.plannedDays * DayMath.MILLIS_PER_DAY
+
+    /**
+     * The moment a tray stops being active within the plan: the next tray's effective
+     * start when one exists, otherwise start + plannedDays. This keeps weekday-aligned
+     * plans accurate (the first gap can differ from [plannedDays]).
+     */
+    fun effectiveEndInPlan(trays: List<PlanTray>, index: Int): Long {
+        val sorted = sorted(trays)
+        val tray = sorted.getOrNull(index) ?: return 0L
+        return sorted.getOrNull(index + 1)?.let { effectiveStart(it) } ?: effectiveEnd(tray)
+    }
 
     /** Chained plan: a tray with no explicit plan starts when the previous one ends. */
     fun chainedPlannedStarts(trays: List<PlanTray>): List<PlanTray> {
@@ -98,8 +147,9 @@ object PlanEngine {
     }
 
     fun daysLeftInTray(trays: List<PlanTray>, todayEpoch: Long): Int {
-        val t = currentTray(trays, todayEpoch) ?: return 0
-        val left = ((effectiveEnd(t) - todayEpoch) / DayMath.MILLIS_PER_DAY).toInt()
+        val idx = currentIndex(trays, todayEpoch)
+        if (idx < 0) return 0
+        val left = ((effectiveEndInPlan(trays, idx) - todayEpoch) / DayMath.MILLIS_PER_DAY).toInt()
         return left.coerceAtLeast(0)
     }
 
@@ -161,15 +211,23 @@ object PlanEngine {
     ): List<PlanTray> {
         val sorted = sorted(trays).toMutableList()
         if (targetIndex !in sorted.indices) return sorted
+        val switchDayStart = Instant.ofEpochMilli(switchEpoch)
+            .atZone(ZoneId.systemDefault()).toLocalDate().atStartOfDay(ZoneId.systemDefault())
+            .toInstant().toEpochMilli()
+        val wasBackward = targetIndex < currentIndex(sorted, switchDayStart)
         for (i in sorted.indices) {
             val t = sorted[i]
             sorted[i] = when {
                 i < targetIndex -> t.copy(completed = true, actualStartEpoch = t.actualStartEpoch ?: t.plannedStartEpoch)
                 i == targetIndex -> t.copy(actualStartEpoch = switchEpoch, completed = false)
-                else -> if (autoAdjust) t else t
+                // Later trays become "upcoming" again; otherwise a backward switch would
+                // leave an already-started tray looking like the current one.
+                else -> t.copy(completed = false, actualStartEpoch = null)
             }
         }
-        return if (autoAdjust) chainedPlannedStarts(sorted) else sorted
+        // A backward switch must always re-chain later planned starts: otherwise their
+        // old (already-past) dates would still make them look like the current tray.
+        return if (autoAdjust || wasBackward) chainedPlannedStarts(sorted) else sorted
     }
 
     /**

@@ -30,6 +30,7 @@ object Routes {
     const val ADD_EVENT = "add-event/{epochDay}"
     const val ADD_NOTE = "add-note/{epochDay}"
     const val APPOINTMENT = "appointment/{id}"
+    const val LOG_SWITCH = "log-switch/{epochDay}"
     const val TREATMENT = "treatment"
     const val SETTINGS = "settings"
     const val SETTINGS_TIMER = "settings/timer"

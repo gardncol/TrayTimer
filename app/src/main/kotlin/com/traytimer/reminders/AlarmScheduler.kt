@@ -150,10 +150,11 @@ object AlarmScheduler {
         val todayMidnight = LocalDate.now(zone).atStartOfDay(zone).toInstant().toEpochMilli()
         val current = PlanEngine.currentTray(trays, todayMidnight)
         if (current != null && s.trayChangeReminderEnabled) {
-            // The plan's end instant IS the change moment (e.g. 08:00 on the switch
+            // The next tray's start IS the change moment (e.g. 08:00 on the switch
             // day), so use that calendar day rather than the day before.
-            val changeDay: LocalDate = Instant.ofEpochMilli(PlanEngine.effectiveEnd(current))
-                .atZone(zone).toLocalDate()
+            val currentIdx = PlanEngine.currentIndex(trays, todayMidnight)
+            val changeInstant = PlanEngine.effectiveEndInPlan(trays, currentIdx)
+            val changeDay: LocalDate = Instant.ofEpochMilli(changeInstant).atZone(zone).toLocalDate()
             val t = LocalTime.of(s.trayChangeReminderMinutesOfDay / 60, s.trayChangeReminderMinutesOfDay % 60)
             val plannedTrigger = changeDay.atTime(t).atZone(zone).toInstant().toEpochMilli()
             val trigger = when {

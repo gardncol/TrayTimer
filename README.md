@@ -31,6 +31,9 @@ A clear-aligner wear-time tracker for Android: log when your trays are out, get 
 - Per-aligner durations with "apply to subsequent aligners".
 - Early / late / backward tray-change detection with confirmations.
 - Exact switch timestamps: wear time for a new aligner starts when you actually change trays, not at midnight.
+- **Log aligner switch** flow: choose the date, time and aligner; the previous aligner's end and the new aligner's start are recorded together and shown in the calendar day detail.
+- Set the current aligner back to a previous one directly from the treatment plan (no rebuild needed).
+- Rebuild with a custom current-aligner start date and a recurring **future switch weekday** (e.g. switched Monday, but keep changing on Tuesdays).
 - Tray-change reminder at the planned day/time, with an actionable notification and an in-app **Change now / Later** popover.
 - Automatic Treatment Adjustment (recalculates subsequent trays on early/late switches).
 - **Rebuild plan** action to re-anchor the current aligner to today.
@@ -124,7 +127,7 @@ Or copy the APK to a device, allow "install unknown apps" for the file manager/b
 | standard | `com.traytimer` | TrayTimer |
 | dev | `com.traytimer.dev` | TrayTimer Dev |
 
-Version: `1.0.6` (`versionCode 7`), min SDK 26, target/compile SDK 35.
+Version: `1.0.7` (`versionCode 8`), min SDK 26, target/compile SDK 35.
 
 ---
 

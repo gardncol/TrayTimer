@@ -139,7 +139,7 @@ fun TimerScreen(
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .fillMaxWidth(0.96f)
+                    .fillMaxWidth(0.92f)
                     .aspectRatio(1f)
                     .clickable {
                         val willStop = timerState.openSession != null
@@ -485,7 +485,7 @@ private fun WearRing(
     val trackColor = Color.Gray.copy(alpha = 0.25f)
     Canvas(modifier = modifier) {
         // Thicker ring so the wear/out arcs are easier to read at a glance.
-        val stroke = 38f
+        val stroke = 50f
         val inset = stroke
         val sizeArc = Size(this.size.width - inset * 2, this.size.height - inset * 2)
         val topLeft = Offset(inset, inset)

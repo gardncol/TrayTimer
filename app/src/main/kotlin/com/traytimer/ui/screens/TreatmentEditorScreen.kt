@@ -2,6 +2,7 @@ package com.traytimer.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,11 +21,16 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -58,8 +64,9 @@ import java.time.format.DateTimeFormatter
  * Treatment plan editor (FR-TRT-01..11): phases, per-tray durations with range
  * application, switch logging with off-schedule confirmation, auto-adjust (Plus).
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TreatmentEditorScreen(onBack: () -> Unit) {
+fun TreatmentEditorScreen(onBack: () -> Unit, onLogSwitch: () -> Unit = {}) {
     val vm: MainViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -118,18 +125,25 @@ fun TreatmentEditorScreen(onBack: () -> Unit) {
             }
         )
 
-        OutlinedButton(
-            onClick = {
-                val next = currentIdx + 1
-                if (next < sorted.size) {
-                    switchTarget = next
-                    switchDialogKind = PlanEngine.classifySwitch(sorted, next, System.currentTimeMillis(), zone)
-                }
-            },
-            modifier = Modifier
-                .padding(horizontal = 12.dp)
-                .fillMaxWidth()
-        ) { Text("Change tray now") }
+        Row(
+            Modifier.padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = {
+                    val next = currentIdx + 1
+                    if (next < sorted.size) {
+                        switchTarget = next
+                        switchDialogKind = PlanEngine.classifySwitch(sorted, next, System.currentTimeMillis(), zone)
+                    }
+                },
+                modifier = Modifier.weight(1f)
+            ) { Text("Change tray now") }
+            OutlinedButton(
+                onClick = onLogSwitch,
+                modifier = Modifier.weight(1f)
+            ) { Text("Log switch…") }
+        }
 
         LazyColumn(Modifier.weight(1f)) {
             val phases = PlanEngine.phases(sorted)
@@ -183,6 +197,15 @@ fun TreatmentEditorScreen(onBack: () -> Unit) {
         EditTrayDurationDialog(
             tray = tray,
             totalTrays = sorted.size,
+            isCurrent = tray.orderIndex == currentIdx,
+            onSetCurrent = {
+                val kind = PlanEngine.classifySwitch(
+                    sorted, tray.orderIndex, System.currentTimeMillis(), zone
+                )
+                switchTarget = tray.orderIndex
+                switchDialogKind = kind
+                editingTray = null
+            },
             onApply = { newDays, applyUntil ->
                 scope.launch {
                     // Plan edits always recalculate chained start dates (FR-TRT-02/04);
@@ -248,13 +271,17 @@ fun TreatmentEditorScreen(onBack: () -> Unit) {
         var daysText by remember {
             mutableStateOf((settings?.daysPerAligner?.takeIf { it > 0 } ?: 7).toString())
         }
+        var startDate by remember { mutableStateOf(LocalDate.now(zone)) }
+        var switchDay by remember { mutableStateOf<Int?>(null) }
+        var showStartDatePicker by remember { mutableStateOf(false) }
+        var showSwitchDayMenu by remember { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { showRebuild = false },
             title = { Text("Rebuild plan") },
             text = {
                 Column {
                     Text(
-                        "Anchors the current aligner to today and recalculates the schedule. " +
+                        "Anchors the current aligner to the start date and recalculates the schedule. " +
                             "Wear time, notes and appointments are kept.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
@@ -278,6 +305,50 @@ fun TreatmentEditorScreen(onBack: () -> Unit) {
                         label = { Text("Days per aligner") },
                         singleLine = true
                     )
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedButton(
+                        onClick = { showStartDatePicker = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "Current aligner started: " +
+                                startDate.format(DateTimeFormatter.ofPattern("MMM d, yyyy"))
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Box {
+                        OutlinedButton(
+                            onClick = { showSwitchDayMenu = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                "Future switch day: " +
+                                    (switchDay?.let { weekdayLabel(it) } ?: "Same as start day")
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showSwitchDayMenu,
+                            onDismissRequest = { showSwitchDayMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Same as start day") },
+                                onClick = { switchDay = null; showSwitchDayMenu = false }
+                            )
+                            (1..7).forEach { d ->
+                                DropdownMenuItem(
+                                    text = { Text(weekdayLabel(d)) },
+                                    onClick = { switchDay = d; showSwitchDayMenu = false }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Changed on a different day than usual? Pick your normal switch day; " +
+                            "the current aligner keeps its start date, and all later aligners move to that weekday.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
                 }
             },
             confirmButton = {
@@ -289,15 +360,25 @@ fun TreatmentEditorScreen(onBack: () -> Unit) {
                         days != null && days in 1..60
                     ) {
                         scope.launch {
-                            val todayMidnight = LocalDate.now(zone).atStartOfDay(zone)
-                                .toInstant().toEpochMilli()
-                            Graph.treatmentRepository.createPlan(total, current, days, todayMidnight)
+                            val start = startDate.atStartOfDay(zone).toInstant().toEpochMilli()
+                            Graph.treatmentRepository.createPlan(
+                                total, current, days, start,
+                                switchDayOfWeek = switchDay,
+                                zone = zone
+                            )
                             Graph.settingsStore.updateAwait { st, p ->
                                 p[Keys.TOTAL_ALIGNERS] = total
                                 p[Keys.DAYS_PER] = days
                             }
                             AlarmScheduler.rescheduleAll(context)
-                            Analytics.log("plan_rebuilt", mapOf("current" to current, "total" to total))
+                            Analytics.log(
+                                "plan_rebuilt",
+                                mapOf(
+                                    "current" to current,
+                                    "total" to total,
+                                    "switchDay" to (switchDay ?: 0)
+                                )
+                            )
                         }
                         showRebuild = false
                     }
@@ -305,6 +386,28 @@ fun TreatmentEditorScreen(onBack: () -> Unit) {
             },
             dismissButton = { TextButton(onClick = { showRebuild = false }) { Text("Cancel") } }
         )
+
+        if (showStartDatePicker) {
+            val state = rememberDatePickerState(
+                initialSelectedDateMillis = startDate.atStartOfDay(zone).toInstant().toEpochMilli()
+            )
+            AlertDialog(
+                onDismissRequest = { showStartDatePicker = false },
+                title = { Text("Current aligner start date") },
+                text = { DatePicker(state = state) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        state.selectedDateMillis?.let {
+                            startDate = Instant.ofEpochMilli(it).atZone(ZoneId.of("UTC")).toLocalDate()
+                        }
+                        showStartDatePicker = false
+                    }) { Text("OK") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showStartDatePicker = false }) { Text("Cancel") }
+                }
+            )
+        }
     }
 
     // ---- Add refinement (FR-TRT-01) ----
@@ -365,6 +468,10 @@ fun TreatmentEditorScreen(onBack: () -> Unit) {
     }
 
 }
+
+private fun weekdayLabel(dayOfWeek: Int): String =
+    java.time.DayOfWeek.of(dayOfWeek.coerceIn(1, 7)).name
+        .lowercase().replaceFirstChar { it.uppercase() }
 
 @Composable
 private fun BoxEmptyPlan() {
@@ -433,7 +540,7 @@ private fun TrayRow(
         }
         when {
             isCurrent -> AssistChip(onClick = onSwitchHere, label = { Text("Current") })
-            tray.completed -> AssistChip(onClick = onSwitchHere, label = { Text("Done") })
+            tray.completed -> AssistChip(onClick = onSwitchHere, label = { Text("Set current") })
             else -> AssistChip(onClick = onSwitchHere, label = { Text("Upcoming") })
         }
     }
@@ -443,6 +550,8 @@ private fun TrayRow(
 private fun EditTrayDurationDialog(
     tray: PlanTray,
     totalTrays: Int,
+    isCurrent: Boolean,
+    onSetCurrent: () -> Unit,
     onApply: (Int, Int?) -> Unit,
     onDelete: () -> Unit,
     onCancel: () -> Unit
@@ -475,6 +584,12 @@ private fun EditTrayDurationDialog(
                         label = { Text("Apply from ${tray.label} to aligner…") },
                         singleLine = true
                     )
+                }
+                if (!isCurrent) {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = onSetCurrent, modifier = Modifier.fillMaxWidth()) {
+                        Text("Set as current aligner")
+                    }
                 }
             }
         },

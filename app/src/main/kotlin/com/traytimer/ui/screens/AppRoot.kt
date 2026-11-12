@@ -121,7 +121,19 @@ fun AppRoot() {
             val id = entry.arguments?.getString("id")?.toLongOrNull() ?: -1L
             AppointmentEditorScreen(appointmentId = id, onBack = { navController.popBackStack() })
         }
-        composable(Routes.TREATMENT) { TreatmentEditorScreen(onBack = { navController.popBackStack() }) }
+        composable(Routes.LOG_SWITCH) { entry ->
+            val epochDay = entry.arguments?.getString("epochDay")?.toLongOrNull()
+                ?: java.time.LocalDate.now().toEpochDay()
+            LogSwitchScreen(initialEpochDay = epochDay, onBack = { navController.popBackStack() })
+        }
+        composable(Routes.TREATMENT) {
+            TreatmentEditorScreen(
+                onBack = { navController.popBackStack() },
+                onLogSwitch = {
+                    navController.navigate("log-switch/${java.time.LocalDate.now().toEpochDay()}")
+                }
+            )
+        }
         composable(Routes.SETTINGS) { SettingsHubScreen(navController) }
         composable(Routes.SETTINGS_TIMER) { TimerSettingsScreen(navController) }
         composable(Routes.SETTINGS_REMINDERS) { ReminderSettingsScreen(navController) }

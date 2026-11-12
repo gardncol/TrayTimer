@@ -203,9 +203,10 @@ fun CalendarScreen(vm: MainViewModel, modifier: Modifier, navController: NavHost
                         quickMenu = false
                         navController.navigate("add-event/${LocalDate.now(zone).toEpochDay()}")
                     }) { Text("Add out/in event") }
-                    TextButton(onClick = { quickMenu = false; navController.navigate(Routes.TREATMENT) }) {
-                        Text("Log aligner switch")
-                    }
+                    TextButton(onClick = {
+                        quickMenu = false
+                        navController.navigate("log-switch/${LocalDate.now(zone).toEpochDay()}")
+                    }) { Text("Log aligner switch") }
                     TextButton(onClick = {
                         quickMenu = false
                         navController.navigate("appointment/-1")
@@ -317,6 +318,7 @@ fun DayEventsScreen(epochDay: Long, onBack: () -> Unit, navController: NavHostCo
     val day = LocalDate.ofEpochDay(epochDay)
     val sessions by Graph.timerRepository.observeSessions().collectAsState(initial = emptyList())
     val appointments by Graph.appointmentRepository.observeAppointments().collectAsState(initial = emptyList())
+    val trays by Graph.treatmentRepository.observeTrays().collectAsState(initial = emptyList())
     val settings by Graph.settingsStore.settings.collectAsState(initial = null)
     var note by remember { mutableStateOf<String?>(null) }
     var showAddMenu by remember { mutableStateOf(false) }
@@ -335,6 +337,11 @@ fun DayEventsScreen(epochDay: Long, onBack: () -> Unit, navController: NavHostCo
     val dayAppointments = appointments
         .filter { DayMath.dateAt(it.startEpoch, zone) == day }
         .sortedBy { it.startEpoch }
+    val sortedTrays = com.traytimer.core.logic.PlanEngine.sorted(trays)
+    val daySwitches = sortedTrays.mapIndexedNotNull { index, tray ->
+        val at = tray.actualStartEpoch ?: return@mapIndexedNotNull null
+        if (DayMath.dateAt(at, zone) != day) null else Triple(index, tray, at)
+    }.sortedBy { it.third }
     val inMillis = DayMath.inMillisForDay(epochDay, sessions, resetMinutes, zone)
 
     Box(Modifier.fillMaxSize()) {
@@ -402,6 +409,36 @@ fun DayEventsScreen(epochDay: Long, onBack: () -> Unit, navController: NavHostCo
                 }
             }
         }
+        Spacer(Modifier.height(12.dp))
+
+        SectionCard {
+            Text("Aligner switches", style = MaterialTheme.typography.titleMedium)
+            if (daySwitches.isEmpty()) {
+                Text(
+                    "No aligner switches on this day.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
+            daySwitches.forEach { (index, tray, at) ->
+                val prev = sortedTrays.getOrNull(index - 1)
+                Column(Modifier.padding(vertical = 4.dp)) {
+                    Text(
+                        "Aligner ${tray.label} became active at ${clock(at, zone)}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (prev != null) {
+                        Text(
+                            "Aligner ${prev.label} is no longer active",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+            }
+        }
+
         note?.let { text ->
             Spacer(Modifier.height(12.dp))
             SectionCard {
@@ -448,7 +485,7 @@ fun DayEventsScreen(epochDay: Long, onBack: () -> Unit, navController: NavHostCo
                     }) { Text("Orthodontic appointment") }
                     TextButton(onClick = {
                         showAddMenu = false
-                        navController.navigate(com.traytimer.ui.nav.Routes.TREATMENT)
+                        navController.navigate("log-switch/${day.toEpochDay()}")
                     }) { Text("Log aligner switch") }
                 }
             },

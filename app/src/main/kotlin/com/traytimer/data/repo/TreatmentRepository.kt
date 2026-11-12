@@ -20,9 +20,14 @@ class TreatmentRepository(private val db: AppDatabase) {
         currentAligner: Int,
         daysPerAligner: Int,
         startDate: Long,
-        labelPrefix: String = ""
+        labelPrefix: String = "",
+        switchDayOfWeek: Int? = null,
+        zone: ZoneId = ZoneId.systemDefault()
     ) {
-        val trays = PlanEngine.buildPlan(totalAligners, currentAligner, daysPerAligner, startDate, labelPrefix)
+        val trays = PlanEngine.buildPlan(
+            totalAligners, currentAligner, daysPerAligner, startDate, labelPrefix,
+            switchDayOfWeek, zone
+        )
         db.planTrayDao().deleteAll()
         db.planTrayDao().insertAll(trays)
     }

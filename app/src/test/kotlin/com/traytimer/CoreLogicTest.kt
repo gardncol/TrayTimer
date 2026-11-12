@@ -209,6 +209,36 @@ class CoreLogicTest {
     }
 
     @Test
+    fun `future trays can be pinned to a weekday`() {
+        val monday = LocalDate.of(2026, 11, 9) // Monday
+        val trays = PlanEngine.buildPlan(4, 1, 7, at(monday, 0), switchDayOfWeek = 2, zone = utc)
+        val sorted = PlanEngine.sorted(trays)
+        assertEquals(at(monday, 0), PlanEngine.effectiveStart(sorted[0]))
+        // The current aligner started Monday; future ones move to Tuesdays.
+        assertEquals(at(monday.plusDays(8), 0), PlanEngine.effectiveStart(sorted[1]))
+        assertEquals(at(monday.plusDays(15), 0), PlanEngine.effectiveStart(sorted[2]))
+        assertEquals(at(monday.plusDays(22), 0), PlanEngine.effectiveStart(sorted[3]))
+        // Days-left uses the real next boundary (8 days, not the 7-day plan length).
+        assertEquals(8, PlanEngine.daysLeftInTray(sorted, at(monday, 0)))
+    }
+
+    @Test
+    fun `switching back to a previous tray clears later trays`() {
+        val trays = PlanEngine.buildPlan(5, 1, 7, at(day, 0))
+        val forward = PlanEngine.applySwitch(trays, 3, at(day.plusDays(20), 9), autoAdjust = false)
+        assertEquals(3, PlanEngine.currentIndex(forward, at(day.plusDays(20), 0)))
+
+        val back = PlanEngine.applySwitch(forward, 1, at(day.plusDays(21), 10), autoAdjust = false)
+        val sorted = PlanEngine.sorted(back)
+        assertEquals(1, PlanEngine.currentIndex(back, at(day.plusDays(21), 0)))
+        assertTrue(!sorted[1].completed)
+        for (i in 2..4) {
+            assertTrue(!sorted[i].completed)
+            assertEquals(null, sorted[i].actualStartEpoch)
+        }
+    }
+
+    @Test
     fun `automatic adjustment moves subsequent trays when switching early`() {
         val trays = plan(total = 10, current = 1, days = 7)
         val switchDay = at(day, 0) + 12 * DayMath.MILLIS_PER_DAY // tray 3 is planned for day 14
