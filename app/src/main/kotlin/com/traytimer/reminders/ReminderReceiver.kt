@@ -53,6 +53,27 @@ class ReminderReceiver : BroadcastReceiver() {
                     settings.fullScreenAlarm,
                     com.traytimer.core.notifications.Channels.alarmChannelId(context, settings.alarmSoundUri)
                 )
+                // A notification's full-screen intent is only auto-launched while the
+                // device is locked/idle. When the screen is already on and another app
+                // is in front, start the alarm screen directly as well.
+                if (settings.fullScreenAlarm) {
+                    // Ring even if the OS refuses the background activity launch.
+                    runCatching {
+                        com.traytimer.alarm.AlarmRingingService.start(context)
+                    }
+                    val launch = Intent(context, com.traytimer.alarm.AlarmActivity::class.java).apply {
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        )
+                        putExtra(
+                            com.traytimer.alarm.AlarmActivity.EXTRA_KIND,
+                            com.traytimer.alarm.AlarmActivity.KIND_PUT_BACK
+                        )
+                    }
+                    runCatching { context.startActivity(launch) }
+                }
                 Graph.settingsStore.updateAwait { st, p ->
                     p[com.traytimer.data.prefs.Keys.PUT_BACK_CYCLE_START] = cycleStart
                     p[com.traytimer.data.prefs.Keys.PUT_BACK_SESSION_START] = open.startEpoch

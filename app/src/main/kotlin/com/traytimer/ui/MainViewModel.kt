@@ -307,11 +307,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun snoozeTrayChange() {
         viewModelScope.launch {
             val s = settingsStore.current()
+            val todayMidnight = LocalDate.now(zone(s)).atStartOfDay(zone(s)).toInstant().toEpochMilli()
+            val trays = PlanEngine.sorted(treatmentRepo.getTrays())
+            val currentOrder = trays.getOrNull(PlanEngine.currentIndex(trays, todayMidnight))?.orderIndex ?: -1
             settingsStore.updateAwait { _, p ->
                 p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_DUE_AT] = 0L
                 p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_SNOOZE_AT] =
                     System.currentTimeMillis() + s.trayChangeSnoozeSeconds * 1000L
-                p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_DUE_FOR] = -1
+                // Keep the snooze tied to this aligner so a later switch invalidates it.
+                p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_DUE_FOR] = currentOrder
             }
             Notifications.cancel(getApplication(), Notifications.NOTIF_TRAY_CHANGE)
             AlarmScheduler.rescheduleAll(getApplication())

@@ -81,6 +81,7 @@ class AlarmRingingService : android.app.Service() {
                     .getOrNull()
             }
         }
+        if (pulseJob?.isActive == true) return
         vibrator = if (Build.VERSION.SDK_INT >= 31) {
             (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
         } else {

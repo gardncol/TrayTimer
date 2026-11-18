@@ -53,11 +53,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import kotlinx.coroutines.launch
 import com.traytimer.core.Graph
 import com.traytimer.core.notifications.Channels
 import com.traytimer.data.prefs.Keys
@@ -178,9 +180,25 @@ fun TimerSettingsScreen(navController: NavHostController) {
 @Composable
 fun ReminderSettingsScreen(navController: NavHostController) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val settings by Graph.settingsStore.settings.collectAsState(initial = null)
     val s = settings ?: return
     var showTrayTimePicker by remember { mutableStateOf(false) }
+    var showOverlayPrompt by remember { mutableStateOf(false) }
+    fun reschedule() {
+        scope.launch { AlarmScheduler.rescheduleAll(context) }
+    }
+    fun updateAndReschedule(
+        transform: (
+            com.traytimer.data.prefs.AppSettings,
+            androidx.datastore.preferences.core.MutablePreferences
+        ) -> Unit
+    ) {
+        scope.launch {
+            Graph.settingsStore.updateAwait(transform)
+            AlarmScheduler.rescheduleAll(context)
+        }
+    }
 
     val soundPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -210,7 +228,7 @@ fun ReminderSettingsScreen(navController: NavHostController) {
             )
         }
         SettingRow("Tray-change reminder", checked = s.trayChangeReminderEnabled) { enabled ->
-            Graph.settingsStore.update { st, p -> p[Keys.TRAY_CHANGE_ENABLED] = enabled }
+            updateAndReschedule { st, p -> p[Keys.TRAY_CHANGE_ENABLED] = enabled }
         }
         if (s.trayChangeReminderEnabled) {
             LabeledRow(
@@ -224,17 +242,19 @@ fun ReminderSettingsScreen(navController: NavHostController) {
             "Do you want to receive a reminder when total wear time for your current aligner reaches your plan?",
             s.trayTotalReminderEnabled
         ) { enabled ->
-            Graph.settingsStore.update { st, p -> p[Keys.TRAY_TOTAL_ENABLED] = enabled }
+            updateAndReschedule { st, p -> p[Keys.TRAY_TOTAL_ENABLED] = enabled }
         }
         SettingRow("Selfie reminder", checked = s.selfieReminderEnabled) { enabled ->
-            Graph.settingsStore.update { st, p -> p[Keys.SELFIE_ENABLED] = enabled }
+            updateAndReschedule { st, p -> p[Keys.SELFIE_ENABLED] = enabled }
         }
         if (s.selfieReminderEnabled) {
             SectionCard(Modifier.padding(vertical = 8.dp)) {
                 NumberStepper(
                     label = "Remind every N days",
                     value = s.selfieReminderDays,
-                    onChange = { Graph.settingsStore.update { st, p -> p[Keys.SELFIE_DAYS] = it } },
+                    onChange = {
+                        updateAndReschedule { st, p -> p[Keys.SELFIE_DAYS] = it }
+                    },
                     min = 1, max = 30, valueText = "${s.selfieReminderDays} days"
                 )
             }
@@ -250,7 +270,34 @@ fun ReminderSettingsScreen(navController: NavHostController) {
             "Show the reminder over the lock screen and turn the screen on",
             s.fullScreenAlarm
         ) { enabled ->
-            Graph.settingsStore.update { st, p -> p[Keys.FULL_SCREEN_ALARM] = enabled }
+            updateAndReschedule { st, p -> p[Keys.FULL_SCREEN_ALARM] = enabled }
+            if (enabled && Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(context)) {
+                showOverlayPrompt = true
+            }
+        }
+        if (s.fullScreenAlarm && Build.VERSION.SDK_INT >= 23 &&
+            !Settings.canDrawOverlays(context)
+        ) {
+            SectionCard(Modifier.padding(vertical = 8.dp)) {
+                Text("Allow alarms over other apps", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Android blocks full-screen alarms while another app is open. " +
+                        "Grant 'Display over other apps' so the alarm can take over the screen " +
+                        "even when it is already in use.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                Spacer(Modifier.height(6.dp))
+                OutlinedButton(onClick = {
+                    runCatching {
+                        context.startActivity(
+                            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                                data = android.net.Uri.parse("package:${context.packageName}")
+                            }
+                        )
+                    }
+                }) { Text("Allow alarms over other apps") }
+            }
         }
         LabeledRow("Alarm sound", alarmSoundName, onClick = {
             val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
@@ -278,8 +325,38 @@ fun ReminderSettingsScreen(navController: NavHostController) {
                 { Graph.settingsStore.update { st, p -> p[Keys.SELFIE_SNOOZE] = it } }, 60, 3600, 30)
         }
         OutlinedButton(onClick = {
+            reschedule()
             com.traytimer.widgets.WidgetRefresher.pushAll(context)
         }) { Text("Reschedule all reminders") }
+    }
+
+    if (showOverlayPrompt) {
+        AlertDialog(
+            onDismissRequest = { showOverlayPrompt = false },
+            title = { Text("Show alarms over other apps") },
+            text = {
+                Text(
+                    "Android normally blocks full-screen alarms while another app is open. " +
+                        "Allow TrayTimer to display over other apps so the alarm can take over " +
+                        "the screen even when it is already in use."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showOverlayPrompt = false
+                    runCatching {
+                        context.startActivity(
+                            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                                data = android.net.Uri.parse("package:${context.packageName}")
+                            }
+                        )
+                    }
+                }) { Text("Open settings") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showOverlayPrompt = false }) { Text("Not now") }
+            }
+        )
     }
 
     if (showTrayTimePicker) {
@@ -294,7 +371,7 @@ fun ReminderSettingsScreen(navController: NavHostController) {
             text = { TimePicker(state = state) },
             confirmButton = {
                 TextButton(onClick = {
-                    Graph.settingsStore.update { _, p ->
+                    updateAndReschedule { _, p ->
                         p[Keys.TRAY_CHANGE_TIME] = state.hour * 60 + state.minute
                     }
                     showTrayTimePicker = false
@@ -330,12 +407,24 @@ fun NotificationSettingsScreen(navController: NavHostController) {
             ?.importance == NotificationManager.IMPORTANCE_NONE
         val alarmsBlocked = nm.getNotificationChannel(com.traytimer.core.notifications.Channels.ALARMS)
             ?.importance == NotificationManager.IMPORTANCE_NONE
+        val fullScreenOk = Build.VERSION.SDK_INT < 34 || nm.canUseFullScreenIntent()
 
         StatusRow("Notification permission", if (notifGranted) "granted" else "missing — reminders won't be visible", notifGranted)
         StatusRow("Exact alarms", if (exactOk) "granted" else "not granted — reminders may be delayed", exactOk)
         StatusRow("Battery optimization", if (batteryOk) "exempt" else "on — this app may be delayed or killed", batteryOk)
         StatusRow("Reminders channel", if (remindersBlocked) "blocked" else "active", !remindersBlocked)
         StatusRow("Wearing alarms channel", if (alarmsBlocked) "blocked" else "active", !alarmsBlocked)
+        val overlayOk = Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(context)
+        StatusRow(
+            "Alarms over other apps",
+            if (overlayOk) "allowed" else "not allowed — alarms show as notifications while using another app",
+            overlayOk
+        )
+        StatusRow(
+            "Full-screen alarms",
+            if (fullScreenOk) "allowed" else "blocked — alarms open as notifications only",
+            fullScreenOk
+        )
 
         Spacer(Modifier.height(12.dp))
         Row {
@@ -362,6 +451,32 @@ fun NotificationSettingsScreen(navController: NavHostController) {
             OutlinedButton(onClick = {
                 context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM))
             }) { Text("Grant exact alarms") }
+        }
+        if (Build.VERSION.SDK_INT >= 23 && !overlayOk) {
+            OutlinedButton(onClick = {
+                context.startActivity(
+                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                        data = android.net.Uri.parse("package:${context.packageName}")
+                    }
+                )
+            }) { Text("Allow alarms over other apps") }
+        }
+        if (Build.VERSION.SDK_INT >= 34 && !fullScreenOk) {
+            OutlinedButton(onClick = {
+                runCatching {
+                    context.startActivity(
+                        Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+                            data = android.net.Uri.parse("package:${context.packageName}")
+                        }
+                    )
+                }.onFailure {
+                    context.startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = android.net.Uri.parse("package:${context.packageName}")
+                        }
+                    )
+                }
+            }) { Text("Allow full-screen alarms") }
         }
         Spacer(Modifier.height(12.dp))
         OutlinedButton(onClick = { navController.navigate(Routes.SETTINGS_OEM) }) {

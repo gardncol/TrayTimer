@@ -24,14 +24,18 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.traytimer.core.Graph
 import com.traytimer.core.logic.DayMath
+import com.traytimer.core.logic.PlanEngine
 import com.traytimer.core.notifications.Notifications
 import com.traytimer.reminders.AlarmScheduler
 import com.traytimer.ui.brushing.BrushingActivity
@@ -39,7 +43,14 @@ import com.traytimer.reminders.ReminderReceiver
 import com.traytimer.widgets.WidgetRefresher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
+
+private data class TrayChangeHint(val nextLabel: String, val overdueDays: Int)
 
 /**
  * Full-screen wearing reminder (FR-REM-06/07): shows on the lock screen, shows when
@@ -56,6 +67,8 @@ class AlarmActivity : ComponentActivity() {
     private val scope = CoroutineScope(Dispatchers.IO)
     /** True after the patient silences the sound; the full-screen notice stays. */
     private val muted = androidx.compose.runtime.mutableStateOf(false)
+    /** Non-null when today is the tray-change day (or an overdue switch is pending). */
+    private val trayHint = MutableStateFlow<TrayChangeHint?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,10 +87,17 @@ class AlarmActivity : ComponentActivity() {
 
         AlarmRingingService.start(this)
 
+        scope.launch {
+            val hint = loadTrayChangeHint()
+            withContext(Dispatchers.Main) { trayHint.value = hint }
+        }
+
         setContent {
+            val hint by trayHint.collectAsState()
             MaterialTheme {
                 AlarmScreen(
                     muted = muted.value,
+                    trayHint = hint,
                     onWearing = { finishWithAction { wornNow() } },
                     onBrush = { brushTeeth() },
                     onAdd5 = { finishWithAction { extend(5) } },
@@ -89,6 +109,29 @@ class AlarmActivity : ComponentActivity() {
             }
         }
     }
+
+    /**
+     * Tells the alarm screen when it coincides with the current aligner's planned
+     * change day (or a later overdue day), so the patient gets a visual nudge.
+     */
+    private suspend fun loadTrayChangeHint(): TrayChangeHint? = runCatching {
+        val s = Graph.settingsStore.current()
+        if (!s.trayChangeReminderEnabled) return@runCatching null
+        val zone = DayMath.zone(s.useDeviceTimeZone, s.chosenTimeZone)
+        val today = LocalDate.now(zone)
+        val todayMidnight = today.atStartOfDay(zone).toInstant().toEpochMilli()
+        val trays = Graph.treatmentRepository.getTrays()
+        val sorted = PlanEngine.sorted(trays)
+        val idx = PlanEngine.currentIndex(sorted, todayMidnight)
+        val next = sorted.getOrNull(idx + 1) ?: return@runCatching null
+        val changeDay = Instant.ofEpochMilli(PlanEngine.effectiveEndInPlan(sorted, idx))
+            .atZone(zone).toLocalDate()
+        if (today.isBefore(changeDay)) return@runCatching null
+        TrayChangeHint(
+            nextLabel = next.label,
+            overdueDays = ChronoUnit.DAYS.between(changeDay, today).toInt()
+        )
+    }.getOrNull()
 
     /** Silences the ringtone/vibration but keeps the full-screen reminder visible. */
     private fun muteAlarm() {
@@ -195,6 +238,7 @@ class AlarmActivity : ComponentActivity() {
 @Composable
 private fun AlarmScreen(
     muted: Boolean,
+    trayHint: TrayChangeHint?,
     onWearing: () -> Unit,
     onBrush: () -> Unit,
     onAdd5: () -> Unit,
@@ -233,6 +277,39 @@ private fun AlarmScreen(
                 fontSize = 16.sp,
                 textAlign = TextAlign.Center
             )
+            trayHint?.let { hint ->
+                Spacer(Modifier.height(12.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF7C2D12).copy(alpha = 0.65f), RoundedCornerShape(16.dp))
+                        .padding(12.dp)
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = if (hint.overdueDays <= 0) {
+                                "🔁 Today is your aligner change day"
+                            } else {
+                                "🔁 Aligner change overdue by ${hint.overdueDays} day" +
+                                    if (hint.overdueDays == 1) "" else "s"
+                            },
+                            color = Color(0xFFFDE68A),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = "Switch to aligner ${hint.nextLabel} after this reminder.",
+                            color = Color(0xFFFDE68A),
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(8.dp))
             if (muted) {
                 Text(

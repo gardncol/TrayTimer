@@ -126,9 +126,9 @@ object PlanEngine {
     }
 
     /**
-     * Index of the tray currently worn (last tray whose effective start falls on or
-     * before today), or first. A switch logged at 08:00 today is the current tray for
-     * the whole day, so the cutoff is the end of the day rather than midnight.
+     * Index of the aligner that is actually active: the last one with a logged switch
+     * timestamp (or the initial current aligner). Planned dates alone never advance the
+     * active tray — the patient must log a tray-change event first.
      */
     fun currentIndex(trays: List<PlanTray>, todayEpoch: Long): Int {
         val sorted = sorted(trays)
@@ -136,9 +136,31 @@ object PlanEngine {
         val cutoff = todayEpoch + DayMath.MILLIS_PER_DAY
         var idx = 0
         for ((i, t) in sorted.withIndex()) {
+            val started = t.actualStartEpoch ?: continue
+            if (started < cutoff) idx = i
+        }
+        return idx
+    }
+
+    /**
+     * Index of the tray scheduled for [dayEpoch] according to planned/actual dates.
+     * Used for calendar badges, which should still show future planned switch days even
+     * though the tray is not active until the patient logs the change.
+     */
+    fun plannedIndex(trays: List<PlanTray>, dayEpoch: Long): Int {
+        val sorted = sorted(trays)
+        if (sorted.isEmpty()) return -1
+        val cutoff = dayEpoch + DayMath.MILLIS_PER_DAY
+        var idx = 0
+        for ((i, t) in sorted.withIndex()) {
             if (effectiveStart(t) < cutoff) idx = i
         }
         return idx
+    }
+
+    fun plannedTray(trays: List<PlanTray>, dayEpoch: Long): PlanTray? {
+        val i = plannedIndex(trays, dayEpoch)
+        return if (i < 0) null else sorted(trays)[i]
     }
 
     fun currentTray(trays: List<PlanTray>, todayEpoch: Long): PlanTray? {

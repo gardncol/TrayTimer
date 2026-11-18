@@ -157,8 +157,13 @@ object AlarmScheduler {
             val changeDay: LocalDate = Instant.ofEpochMilli(changeInstant).atZone(zone).toLocalDate()
             val t = LocalTime.of(s.trayChangeReminderMinutesOfDay / 60, s.trayChangeReminderMinutesOfDay % 60)
             val plannedTrigger = changeDay.atTime(t).atZone(zone).toInstant().toEpochMilli()
+            // A snooze only applies to the tray it was created for. After a switch it
+            // must not override the new aligner's planned reminder time.
+            val snoozeForThisTray =
+                s.trayChangeSnoozeAt > now &&
+                    (s.trayChangeDueFor < 0 || s.trayChangeDueFor == current.orderIndex)
             val trigger = when {
-                s.trayChangeSnoozeAt > now -> s.trayChangeSnoozeAt
+                snoozeForThisTray -> s.trayChangeSnoozeAt
                 plannedTrigger > now -> plannedTrigger
                 else -> {
                     // Overdue (e.g. the app was off): nudge at the next occurrence.
@@ -174,9 +179,9 @@ object AlarmScheduler {
             if (trigger > now) scheduleTrayChange(context, trigger)
 
             // Once the patient actually moves to another tray, drop the pending
-            // popover (it belongs to the tray they were being reminded about).
-            if (s.trayChangeDueAt > 0 && s.trayChangeDueFor >= 0 &&
-                current.orderIndex != s.trayChangeDueFor
+            // popover/snooze (they belong to the tray being reminded about).
+            if (s.trayChangeDueFor >= 0 && current.orderIndex != s.trayChangeDueFor &&
+                (s.trayChangeDueAt > 0 || s.trayChangeSnoozeAt > 0)
             ) {
                 Graph.settingsStore.updateAwait { _, p ->
                     p[com.traytimer.data.prefs.Keys.TRAY_CHANGE_DUE_AT] = 0L

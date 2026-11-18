@@ -31,6 +31,7 @@ A clear-aligner wear-time tracker for Android: log when your trays are out, get 
 - Per-aligner durations with "apply to subsequent aligners".
 - Early / late / backward tray-change detection with confirmations.
 - Exact switch timestamps: wear time for a new aligner starts when you actually change trays, not at midnight.
+- The **active aligner only advances when you log a switch** — planned dates never auto-activate the next tray.
 - **Log aligner switch** flow: choose the date, time and aligner; the previous aligner's end and the new aligner's start are recorded together and shown in the calendar day detail.
 - Set the current aligner back to a previous one directly from the treatment plan (no rebuild needed).
 - Rebuild with a custom current-aligner start date and a recurring **future switch weekday** (e.g. switched Monday, but keep changing on Tuesdays).
@@ -52,17 +53,19 @@ A clear-aligner wear-time tracker for Android: log when your trays are out, get 
 - Opt-in save to the device photo library.
 
 ### Stats
-- 7/30/90-day averages (only over tracked days), goal attainment, current streak.
-- Total wear per aligner, and a shareable text summary.
+- Headline **7/30/90-day average in time** (only over tracked days), goal attainment, current streak.
+- **Total wear per aligner**, sorted most recent first, and a shareable text summary.
 
 ### Reminders & notifications
 - Exact alarms with graceful fallback, plus boot / time-zone recovery.
 - Put-back, tray-change, tray-total, selfie, and appointment reminders.
-- **Full-screen wearing alarm** over the lock screen with a ringing foreground service.
+- **Full-screen wearing alarm** over the lock screen with a ringing foreground service; it also takes over while another app is open once you grant **Display over other apps**.
+- The alarm screen shows a badge when it is your aligner change day (or when the change is overdue).
 - Mute a ringing alarm with the on-screen **Mute** button or the volume-down key; the full-screen reminder stays visible.
 - Reminder notification actions: **Start wearing**, **Add 5 min**, **Add 10 min**.
 - Re-alerts every **5 minutes for the first 30 minutes**, then every **15 minutes** until answered.
 - Configurable **full-screen alarm** (or notification-only) and a selectable **alarm sound**.
+- Changing a reminder time or toggle reschedules alarms immediately; the tray-change reminder no longer fires late or gets stuck on a stale snooze.
 - **Export/import** all treatment data and photos as a local `.zip`.
 - Notification diagnostics, permission deep links, and OEM "don't kill my app" guidance.
 
@@ -127,7 +130,7 @@ Or copy the APK to a device, allow "install unknown apps" for the file manager/b
 | standard | `com.traytimer` | TrayTimer |
 | dev | `com.traytimer.dev` | TrayTimer Dev |
 
-Version: `1.0.7` (`versionCode 8`), min SDK 26, target/compile SDK 35.
+Version: `1.0.8` (`versionCode 9`), min SDK 26, target/compile SDK 35.
 
 ---
 
@@ -166,6 +169,7 @@ State is derived from timestamped out-sessions; the timer, calendar, stats and r
 
 - `CAMERA` — Teethies capture.
 - `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM`, `USE_FULL_SCREEN_INTENT`, `VIBRATE`, `WAKE_LOCK`, `RECEIVE_BOOT_COMPLETED` — reminders and alarms.
+- `SYSTEM_ALERT_WINDOW` — optional special access ("Display over other apps") so a full-screen alarm can appear while the screen is on and another app is in front.
 - `FOREGROUND_SERVICE*` — full-screen ringing and Live Updates.
 - `READ_CALENDAR` / `WRITE_CALENDAR` — optional system-calendar sync.
 

@@ -60,6 +60,19 @@ object StatsCalc {
         return streak
     }
 
+    /** Wear totals for every tray in the plan, keyed by [PlanTray.orderIndex]. */
+    fun wearPerTray(
+        sessions: List<OutSession>,
+        trays: List<PlanTray>,
+        resetMinutes: Int,
+        now: Long = System.currentTimeMillis()
+    ): Map<Int, Long> {
+        val sorted = PlanEngine.sorted(trays)
+        return sorted.mapIndexed { index, tray ->
+            tray.orderIndex to wearForTray(sessions, sorted, index, resetMinutes, now)
+        }.toMap()
+    }
+
     /**
      * Cumulative wear for a tray: in-time between the tray's effective start and the
      * effective start of the next tray (or now for the current tray).

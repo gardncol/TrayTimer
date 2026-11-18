@@ -209,6 +209,19 @@ class CoreLogicTest {
     }
 
     @Test
+    fun `planned dates do not activate the next tray without a switch`() {
+        val trays = PlanEngine.buildPlan(4, 1, 7, at(day, 0))
+        val sorted = PlanEngine.sorted(trays)
+        // Over a week later, the active tray is still tray 1 because no switch was logged.
+        assertEquals(0, PlanEngine.currentIndex(sorted, at(day.plusDays(8), 0)))
+        // The calendar still shows tray 2 on its planned switch day.
+        assertEquals("2", PlanEngine.plannedTray(sorted, at(day.plusDays(7), 0))?.label)
+        // Logging the switch activates it.
+        val switched = PlanEngine.applySwitch(trays, 1, at(day.plusDays(8), 9), autoAdjust = false)
+        assertEquals(1, PlanEngine.currentIndex(switched, at(day.plusDays(8), 0)))
+    }
+
+    @Test
     fun `future trays can be pinned to a weekday`() {
         val monday = LocalDate.of(2026, 11, 9) // Monday
         val trays = PlanEngine.buildPlan(4, 1, 7, at(monday, 0), switchDayOfWeek = 2, zone = utc)
